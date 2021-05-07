@@ -4,6 +4,8 @@
 
 Provided under MIT license
 
+
+
 ## Overview
 
 Use this repo as a template when creating a new plugin for Essentials. For more information about plugins, refer to the Essentials Wiki [Plugins](https://github.com/PepperDash/Essentials/wiki/Plugins) article.
