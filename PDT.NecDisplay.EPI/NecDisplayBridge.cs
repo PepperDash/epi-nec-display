@@ -82,10 +82,11 @@ namespace PDT.NecDisplay.EPI
 					trilist.StringInput[(ushort)(joinMap.InputNamesOffset + count)].StringValue = input.Key.ToString();
 					count++;
 				}
+              displayDevice.CurrentInputFeedback.LinkInputSig(trilist.UShortInput[joinMap.InputSelect]);
 
                 Debug.Console(2, displayDevice, "Setting Input Select Action on Analog Join {0}", joinMap.InputSelect);
-				trilist.SetUShortSigAction(joinMap.InputSelect, (a) =>
-				
+
+              trilist.SetUShortSigAction(joinMap.InputSelect, (a) =>
 				{
 						if (a == 0)
 						{
@@ -124,9 +125,65 @@ namespace PDT.NecDisplay.EPI
 
 		static void CurrentInputFeedback_OutputChange(object sender, FeedbackEventArgs e)
 		{
+               Debug.Console(0, "CurrentInputFeedback_OutputChange {0}", e.StringValue);
 
-			Debug.Console(0, "CurrentInputFeedback_OutputChange {0}", e.StringValue);
+            if (e.StringValue.Substring(11, 5).Contains("\x31\x31"))
+            {
+                //HDMI 1
+                //InputSelect(11);
+                Debug.Console(0, "CurrentInputFeedback_OutputChange {0}", "HDMI 1");
+                ((PdtNecDisplay)sender).CurrentInput = 1;
+            }
+            if (e.StringValue.Substring(11, 5).Contains("\x31\x32"))
+            {
+                //HDMI 2
+                //InputSelect(12);
+                Debug.Console(0, "CurrentInputFeedback_OutputChange {0}", "HDMI 2");
 
+                ((PdtNecDisplay)sender).CurrentInput = 2;
+            }
+            if (e.StringValue.Substring(11, 5).Contains("\x38\x32"))
+            {
+                //HDMI 3
+                //InputSelect(82);
+                Debug.Console(0, "CurrentInputFeedback_OutputChange {0}", "HDMI 3");
+                ((PdtNecDisplay)sender).CurrentInput = 3;
+            }
+            if (e.StringValue.Substring(11, 5).Contains("\x38\x33"))
+            {
+                //HDMI 4
+                //InputSelect(83);
+                Debug.Console(0, "CurrentInputFeedback_OutputChange {0}", "HDMI 4");
+                ((PdtNecDisplay)sender).CurrentInput = 4;
+            }
+            if (e.StringValue.Substring(11, 5).Contains("\x30\x46"))
+            {
+                //DP 1
+                //InputSelect(15);
+                Debug.Console(0, "CurrentInputFeedback_OutputChange {0}", "DP 1");
+                ((PdtNecDisplay)sender).CurrentInput = 5;
+            }
+            if (e.StringValue.Substring(11, 5).Contains("\x31\x30"))
+            {
+                //DP 2
+                //InputSelect(16);
+                Debug.Console(0, "CurrentInputFeedback_OutputChange {0}", "DP 2");
+                ((PdtNecDisplay)sender).CurrentInput = 6;
+            }
+            if (e.StringValue.Substring(13, 5).Contains("\x30\x30\x31\x03"))
+            {
+                //vga
+
+                Debug.Console(0, "CurrentInputFeedback_OutputChange {0}", "VGA");
+                ((PdtNecDisplay)sender).CurrentInput = 7;
+            }
+            if (e.StringValue.Substring(11, 5).Contains("\x30\x33"))
+            {
+                //vga
+
+                Debug.Console(0, "CurrentInputFeedback_OutputChange {0}", "DVI 1");
+                ((PdtNecDisplay)sender).CurrentInput = 8;
+            }
 		}
 
 		static void PowerIsOnFeedback_OutputChange(object sender, FeedbackEventArgs e)
@@ -158,7 +215,7 @@ namespace PDT.NecDisplay.EPI
         public uint VolumeDown { get; set; }
         public uint VolumeMute { get; set; }
         public uint InputSelectOffset { get; set; }
-		public uint ButtonVisibilityOffset { get; set; }
+         public uint ButtonVisibilityOffset { get; set; }
         public uint IsOnline { get; set; }
 
         // Analog
@@ -173,25 +230,25 @@ namespace PDT.NecDisplay.EPI
 		public DisplayControllerJoinMap()
 		{
 			// Digital
-			IsOnline = 50;
-			PowerOff = 1;
-			PowerOn = 2;
+            IsOnline = 50;
+            PowerOff = 1;
+            PowerOn = 2;
             IsTwoWayDisplay = 3;
             VolumeUp = 5;
             VolumeDown = 6;
             VolumeMute = 7;
 
-			ButtonVisibilityOffset = 40;
+            ButtonVisibilityOffset = 40;
             InputSelectOffset = 10;
 
-			// Analog
+            // Analog
             InputSelect = 11;
             VolumeLevelFB = 5;
 
             // Serial
             Name = 1;
             InputNamesOffset = 10;
-        }
+       }
 
 		public override void OffsetJoinNumbers(uint joinStart)
 		{

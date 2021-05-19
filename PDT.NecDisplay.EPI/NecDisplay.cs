@@ -63,7 +63,21 @@ namespace PDT.NecDisplay.EPI
 		bool _IsWarmingUp;
 		bool _IsCoolingDown;
 		ushort _VolumeLevel;
+       ushort _CurrentInput;
 		bool _IsMuted;
+       public ushort CurrentInput {
+           get
+           {
+               return _CurrentInput; 
+
+           } 
+           set
+           {
+               _CurrentInput = value; 
+                CurrentInputFeedback.FireUpdate(); 
+           }
+       }
+       public IntFeedback CurrentInputFeedback;
 
 		protected override Func<bool> PowerIsOnFeedbackFunc { get { return () => _PowerIsOn; } }
 		protected override Func<bool> IsCoolingDownFeedbackFunc { get { return () => _IsCoolingDown; } }
@@ -130,6 +144,11 @@ namespace PDT.NecDisplay.EPI
 
 			VolumeLevelFeedback = new IntFeedback(() => { return _VolumeLevel; });
 			MuteFeedback = new BoolFeedback(() => _IsMuted);
+
+
+           CurrentInputFeedback = new IntFeedback(() => {return CurrentInput;} );
+                
+                
 
 			//    new BoolCueActionPair(CommonBoolCue.Menu, b => { if(b) Send(MenuIrCmd); }),
 			//    new BoolCueActionPair(CommonBoolCue.Up, b => { if(b) Send(UpIrCmd); }),
