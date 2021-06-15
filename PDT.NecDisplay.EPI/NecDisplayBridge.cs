@@ -67,6 +67,24 @@ namespace PDT.NecDisplay.EPI
 					{
 						displayDevice.PowerOn();
 					});
+                
+                // Picture Mute
+                trilist.SetSigTrueAction(joinMap.PictureMuteOn, () =>
+                    {
+                        displayDevice.PictureMuteOn();
+                    });
+               
+                trilist.SetSigTrueAction(joinMap.PictureMuteOff, () =>
+                {
+                    displayDevice.PictureMuteOff();
+                });
+                
+                trilist.SetSigTrueAction(joinMap.PictureMuteToggle, () =>
+                {
+                    displayDevice.PictureMuteToggle();
+                });
+
+
 
 				
 				displayDevice.PowerIsOnFeedback.LinkInputSig(trilist.BooleanInput[joinMap.PowerOn]);
@@ -217,6 +235,9 @@ namespace PDT.NecDisplay.EPI
         public uint InputSelectOffset { get; set; }
          public uint ButtonVisibilityOffset { get; set; }
         public uint IsOnline { get; set; }
+        public uint PictureMuteOff { get; set; }
+        public uint PictureMuteOn { get; set; }
+        public uint PictureMuteToggle { get; set; }
 
         // Analog
         public uint InputSelect { get; set; }
@@ -237,6 +258,10 @@ namespace PDT.NecDisplay.EPI
             VolumeUp = 5;
             VolumeDown = 6;
             VolumeMute = 7;
+
+            PictureMuteOff = 21;
+            PictureMuteOn = 22;
+            PictureMuteToggle = 23;
 
             ButtonVisibilityOffset = 40;
             InputSelectOffset = 10;
