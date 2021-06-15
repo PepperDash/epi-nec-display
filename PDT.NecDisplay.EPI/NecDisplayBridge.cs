@@ -282,6 +282,9 @@ namespace PDT.NecDisplay.EPI
 			IsOnline = IsOnline + joinOffset;
 			PowerOff = PowerOff + joinOffset;
 			PowerOn = PowerOn + joinOffset;
+            PictureMuteOff = PictureMuteOff + joinOffset;
+            PictureMuteOn = PictureMuteOn + joinOffset;
+            PictureMuteToggle = PictureMuteToggle + joinOffset;
             IsTwoWayDisplay = IsTwoWayDisplay + joinOffset;
 			ButtonVisibilityOffset = ButtonVisibilityOffset + joinOffset;
 			Name = Name + joinOffset;
