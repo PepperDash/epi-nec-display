@@ -256,8 +256,6 @@ namespace PDT.NecDisplay.EPI
 		{
 			// If a display has unreliable-power off feedback, just override this and
 			// remove this check.
-			if (PowerIsOnFeedback.BoolValue && !_IsWarmingUp && !_IsCoolingDown)
-			{
                 AppendChecksumAndSend(PowerOffCmd);
 				_IsCoolingDown = true;
 				_PowerIsOn = false;
@@ -270,7 +268,6 @@ namespace PDT.NecDisplay.EPI
 					_IsCoolingDown = false;
 					IsCoolingDownFeedback.FireUpdate();
 				}, CooldownTime);
-			}
 		}
 
 		public override void PowerToggle()
