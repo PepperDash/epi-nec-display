@@ -69,6 +69,21 @@ namespace PDT.NecDisplay.EPI
 		ushort _VolumeLevel;
        ushort _CurrentInput;
 		bool _IsMuted;
+
+		bool _VideoIsMuted;
+		public bool VideoIsMuted
+		{
+			get
+			{
+				return _VideoIsMuted;
+			}
+			set
+			{
+				_VideoIsMuted = value;
+				VideoIsMutedFeedback.FireUpdate();
+			}
+		}
+		public BoolFeedback VideoIsMutedFeedback;
        public ushort CurrentInput {
            get
            {
@@ -148,6 +163,7 @@ namespace PDT.NecDisplay.EPI
 
 			VolumeLevelFeedback = new IntFeedback(() => { return _VolumeLevel; });
 			MuteFeedback = new BoolFeedback(() => _IsMuted);
+			VideoIsMutedFeedback = new BoolFeedback (() => VideoIsMuted);
 
 
            CurrentInputFeedback = new IntFeedback(() => {return CurrentInput;} );
@@ -179,7 +195,7 @@ namespace PDT.NecDisplay.EPI
 
 		public void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
 		{
-			LinkDisplayToApi(this, trilist, joinStart, joinMapKey, bridge);
+			PdtNecDisplayBridge.LinkToApiExt(this, trilist, joinStart, joinMapKey);
 		}
 
 		public override FeedbackCollection<Feedback> Feedbacks
@@ -202,8 +218,7 @@ namespace PDT.NecDisplay.EPI
 
 			if (args.Text == "DO SOMETHING HERE EVENTUALLY")
 			{
-				_IsMuted = true;
-				MuteFeedback.FireUpdate();
+
 			}
 		}
 
@@ -228,8 +243,8 @@ namespace PDT.NecDisplay.EPI
 
 		void Send(string s)
 		{
-			if (Debug.Level == 2)
-				Debug.Console(2, this, "Send: '{0}'", ComTextHelper.GetEscapedText(s));
+			
+			Debug.Console(2, this, "Send: '{0}'", ComTextHelper.GetEscapedText(s));
 			Communication.SendText(s);
 		}
 
@@ -281,15 +296,27 @@ namespace PDT.NecDisplay.EPI
         public void PictureMuteOn()
         {
             AppendChecksumAndSend(PictureMuteOnCmd);
+			VideoIsMuted = true;
         }
 
         public void PictureMuteOff()
         {
             AppendChecksumAndSend(PictureMuteOffCmd);
+			VideoIsMuted = false;
         }
 
         public void PictureMuteToggle()
         {
+			Debug.Console(2, this, "PictureMuteToggle: '{0}'", VideoIsMuted);
+			if (!VideoIsMuted)
+			{
+				PictureMuteOn();
+			}
+			else
+			{
+				PictureMuteOff();
+			}
+
         }
 
 		public void InputHdmi1()

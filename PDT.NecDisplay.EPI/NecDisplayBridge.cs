@@ -11,24 +11,22 @@ using Newtonsoft.Json;
 
 namespace PDT.NecDisplay.EPI
 {
-	public static class NecDisplayBridge
+	 public static class PdtNecDisplayBridge
 	{
-
-
 		public static void LinkToApiExt(this PdtNecDisplay displayDevice, BasicTriList trilist, uint joinStart, string joinMapKey)
 		{
 
-				DisplayControllerJoinMap joinMap = new DisplayControllerJoinMap();
+				NecDisplayControllerJoinMap joinMap = new NecDisplayControllerJoinMap();
 
 				var JoinMapSerialized = JoinMapHelper.GetJoinMapForDevice(joinMapKey);
 
 				if (!string.IsNullOrEmpty(JoinMapSerialized))
-					joinMap = JsonConvert.DeserializeObject<DisplayControllerJoinMap>(JoinMapSerialized);
+					joinMap = JsonConvert.DeserializeObject<NecDisplayControllerJoinMap>(JoinMapSerialized);
 
 				joinMap.OffsetJoinNumbers(joinStart);
 
-				Debug.Console(1, "Linking to Trilist '{0}'",trilist.ID.ToString("X"));
-				Debug.Console(0, "Linking to Display: {0}", displayDevice.Name);
+				Debug.Console(1, "*** Linking to Trilist '{0}'",trilist.ID.ToString("X"));
+				Debug.Console(0, "*** Linking to Display: {0}", displayDevice.Name);
 
                 trilist.StringInput[joinMap.Name].StringValue = displayDevice.Name;	
 				
@@ -83,6 +81,10 @@ namespace PDT.NecDisplay.EPI
                 {
                     displayDevice.PictureMuteToggle();
                 });
+
+				displayDevice.VideoIsMutedFeedback.LinkInputSig(trilist.BooleanInput[joinMap.PictureMuteOn]);
+				displayDevice.VideoIsMutedFeedback.LinkComplementInputSig(trilist.BooleanInput[joinMap.PictureMuteOff]);
+
 
 
 
@@ -223,7 +225,7 @@ namespace PDT.NecDisplay.EPI
 
 
 	}
-    public class DisplayControllerJoinMap : JoinMapBase
+    public class NecDisplayControllerJoinMap : JoinMapBase
 	{
         // Digital
         public uint PowerOff { get; set; }
@@ -248,7 +250,7 @@ namespace PDT.NecDisplay.EPI
         public uint InputNamesOffset { get; set; }
 
 
-		public DisplayControllerJoinMap()
+		public NecDisplayControllerJoinMap()
 		{
 			// Digital
             IsOnline = 50;
