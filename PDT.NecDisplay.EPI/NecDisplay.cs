@@ -22,7 +22,7 @@ namespace PDT.NecDisplay.EPI
 		public IBasicCommunication Communication { get; private set; }
 		public CommunicationGather PortGather { get; private set; }
 		public StatusMonitorBase CommunicationMonitor { get; private set; }
-
+		private int PollState = 0; 
 		#region Command constants
         //Removed checksum and delimiter to use AddChecksumAndSend method. Using 2A instead of 41 for display '*'
         public const string InputGetCmd = "\x01\x30\x2A\x30\x43\x30\x36\x02\x30\x30\x36\x30\x03"; //\x03\x0D
@@ -40,8 +40,9 @@ namespace PDT.NecDisplay.EPI
         public const string PowerOnCmd = "\x01\x30\x2A\x30\x41\x30\x43\x02\x43\x32\x30\x33\x44\x36\x30\x30\x30\x31\x03"; //\x73\x0D
         public const string PowerOffCmd = "\x01\x30\x2A\x30\x41\x30\x43\x02\x43\x32\x30\x33\x44\x36\x30\x30\x30\x34\x03"; //\x76\x0D
         public const string PowerToggleIrCmd = "\x01\x30\x2A\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x30\x33\x30\x33\x03"; //\x02\x0D
-
-        public const string MuteOffCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x38\x44\x30\x30\x30\x30\x03"; //\x08\x0D
+		public const string PowerPoll = "\x01\x30\x2A\x30\x41\x30\x36\x02\x30\x31\x64\x36\x03"; //\x02\x0D
+        
+		public const string MuteOffCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x38\x44\x30\x30\x30\x30\x03"; //\x08\x0D
         public const string MuteOnCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x38\x44\x30\x30\x30\x31\x03"; //\x09\x0D
         public const string MuteToggleIrCmd = "\x01\x30\x2A\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x31\x42\x30\x33\x03"; //\x72\x0D
         public const string MuteGetCmd = "\x01\x30\x2A\x30\x43\x30\x36\x02\x30\x30\x38\x44\x03"; //\x79\x0D
@@ -67,7 +68,7 @@ namespace PDT.NecDisplay.EPI
 		bool _IsWarmingUp;
 		bool _IsCoolingDown;
 		ushort _VolumeLevel;
-       ushort _CurrentInput;
+		ushort _CurrentInput;
 		bool _IsMuted;
 
 		bool _VideoIsMuted;
@@ -138,7 +139,7 @@ namespace PDT.NecDisplay.EPI
 		{
 			PortGather = new CommunicationGather(Communication, '\x0d');
 			PortGather.LineReceived += this.Port_LineReceived;
-			CommunicationMonitor = new GenericCommunicationMonitor(this, Communication, 30000, 120000, 300000, "xx\x0d");
+			CommunicationMonitor = new GenericCommunicationMonitor(this, Communication, 30000, 120000, 300000, Poll);
 
 			InputPorts.Add(new RoutingInputPort(RoutingPortNames.HdmiIn1, eRoutingSignalType.Audio | eRoutingSignalType.Video,
 				eRoutingPortConnectionType.Hdmi, new Action(InputHdmi1), this));
@@ -209,6 +210,22 @@ namespace PDT.NecDisplay.EPI
 				});
 				return list;
 			}
+		}
+		public void Poll()
+		{
+			AppendChecksumAndSend(PowerPoll);
+			switch (PollState)
+			{
+				case 0: 
+					
+					break;
+				
+				default:
+					PollState = 0;
+					return;
+			}
+			//PollState++; 
+			
 		}
 
 		void Port_LineReceived(object dev, GenericCommMethodReceiveTextArgs args)
