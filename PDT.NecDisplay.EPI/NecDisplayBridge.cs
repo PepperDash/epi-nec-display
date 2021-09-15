@@ -85,7 +85,16 @@ namespace PDT.NecDisplay.EPI
 				displayDevice.VideoIsMutedFeedback.LinkInputSig(trilist.BooleanInput[joinMap.PictureMuteOn]);
 				displayDevice.VideoIsMutedFeedback.LinkComplementInputSig(trilist.BooleanInput[joinMap.PictureMuteOff]);
 
+                // Matrix Mode
+                trilist.SetSigTrueAction(joinMap.MatrixModeOn, () =>
+                {
+                    displayDevice.MatrixModeOn();
+                });
 
+                trilist.SetSigTrueAction(joinMap.MatrixModeOff, () =>
+                {
+                    displayDevice.MatrixModeOff();
+                });
 
 
 				
@@ -240,6 +249,8 @@ namespace PDT.NecDisplay.EPI
         public uint PictureMuteOff { get; set; }
         public uint PictureMuteOn { get; set; }
         public uint PictureMuteToggle { get; set; }
+        public uint MatrixModeOff { get; set; }
+        public uint MatrixModeOn { get; set; }
 
         // Analog
         public uint InputSelect { get; set; }
@@ -264,6 +275,9 @@ namespace PDT.NecDisplay.EPI
             PictureMuteOff = 21;
             PictureMuteOn = 22;
             PictureMuteToggle = 23;
+
+            MatrixModeOff = 41;
+            MatrixModeOn = 42;
 
             ButtonVisibilityOffset = 40;
             InputSelectOffset = 10;
@@ -292,6 +306,8 @@ namespace PDT.NecDisplay.EPI
 			Name = Name + joinOffset;
 			InputNamesOffset = InputNamesOffset + joinOffset;
 			InputSelectOffset = InputSelectOffset + joinOffset;
+            MatrixModeOff = MatrixModeOff + joinOffset;
+            MatrixModeOn = MatrixModeOn + joinOffset;
 
             InputSelect = InputSelect + joinOffset;
 
