@@ -65,6 +65,7 @@ namespace PDT.NecDisplay.EPI
 		ushort _VolumeLevel;
        ushort _CurrentInput;
 		bool _IsMuted;
+       ushort _DisplayID;
        public ushort CurrentInput {
            get
            {
@@ -215,6 +216,7 @@ namespace PDT.NecDisplay.EPI
 
 		void Send(string s)
 		{
+           s[3] = _DisplayID;
 			if (Debug.Level == 2)
 				Debug.Console(2, this, "Send: '{0}'", ComTextHelper.GetEscapedText(s));
 			Communication.SendText(s);
@@ -379,6 +381,11 @@ namespace PDT.NecDisplay.EPI
 			SetVolume(_VolumeLevel--);
 		}
 
+        public void DisplayID(ushort ID)
+        {
+            _DisplayID = ID;
+        }
+
 		#endregion
 	}
 
@@ -399,5 +406,6 @@ namespace PDT.NecDisplay.EPI
 				return null;
 		}
 	}
+
 
 }
