@@ -22,33 +22,41 @@ namespace PDT.NecDisplay.EPI
 		public IBasicCommunication Communication { get; private set; }
 		public CommunicationGather PortGather { get; private set; }
 		public StatusMonitorBase CommunicationMonitor { get; private set; }
-
+		private int PollState = 0; 
 		#region Command constants
-		public const string InputGetCmd = "\x01\x30\x41\x30\x43\x30\x36\x02\x30\x30\x36\x30\x03\x03\x0D";
-		public const string Hdmi1Cmd = "\x01\x30\x41\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x31\x31\x03\x72\x0d";
-		public const string Hdmi2Cmd = "\x01\x30\x41\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x31\x32\x03\x71\x0D";
-		public const string Hdmi3Cmd = "\x01\x30\x41\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x38\x32\x03\x78\x0D";
-		public const string Hdmi4Cmd = "\x01\x30\x41\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x38\x33\x03\x79\x0D";
-		public const string Dp1Cmd = "\x01\x30\x41\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x46\x03\x04\x0D";
-		public const string Dp2Cmd = "\x01\x30\x41\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x31\x30\x03\x73\x0D";
-		public const string Dvi1Cmd = "\x01\x30\x41\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x33\x03\x71\x0d";
-		public const string Video1Cmd = "\x01\x30\x41\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x35\x03\x77\x0D";
-		public const string VgaCmd = "\x01\x30\x41\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x31\x03\x73\x0D";
-		public const string RgbCmd = "\x01\x30\x41\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x32\x03\x70\x0D";
+        //Removed checksum and delimiter to use AddChecksumAndSend method. Using 2A instead of 41 for display '*'
+        public const string InputGetCmd = "\x01\x30\x2A\x30\x43\x30\x36\x02\x30\x30\x36\x30\x03"; //\x03\x0D
+        public const string Hdmi1Cmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x31\x31\x03"; //\x72\x0d
+        public const string Hdmi2Cmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x31\x32\x03"; //\x71\x0D
+        public const string Hdmi3Cmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x38\x32x03"; //\x78\x0D
+        public const string Hdmi4Cmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x38\x33\x03"; //\x79\x0D
+        public const string Dp1Cmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x46\x03"; //\x04\x0D
+        public const string Dp2Cmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x31\x30\x03"; //\x73\x0D
+        public const string Dvi1Cmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x33\x03"; //\x71\x0d
+        public const string Video1Cmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x35\x03"; //\x77\x0D
+        public const string VgaCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x31\x03"; //\x73\x0D
+        public const string RgbCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x32\x03"; //\x70\x0D
 
-		public const string PowerOnCmd = "\x01\x30\x41\x30\x41\x30\x43\x02\x43\x32\x30\x33\x44\x36\x30\x30\x30\x31\x03\x73\x0D";
-		public const string PowerOffCmd = "\x01\x30\x41\x30\x41\x30\x43\x02\x43\x32\x30\x33\x44\x36\x30\x30\x30\x34\x03\x76\x0D";
-		public const string PowerToggleIrCmd = "\x01\x30\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x30\x33\x30\x33\x03\x02\x0D";
+        public const string PowerOnCmd = "\x01\x30\x2A\x30\x41\x30\x43\x02\x43\x32\x30\x33\x44\x36\x30\x30\x30\x31\x03"; //\x73\x0D
+        public const string PowerOffCmd = "\x01\x30\x2A\x30\x41\x30\x43\x02\x43\x32\x30\x33\x44\x36\x30\x30\x30\x34\x03"; //\x76\x0D
+        public const string PowerToggleIrCmd = "\x01\x30\x2A\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x30\x33\x30\x33\x03"; //\x02\x0D
+		public const string PowerPoll = "\x01\x30\x2A\x30\x41\x30\x36\x02\x30\x31\x64\x36\x03"; //\x02\x0D
+        
+		public const string MuteOffCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x38\x44\x30\x30\x30\x30\x03"; //\x08\x0D
+        public const string MuteOnCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x38\x44\x30\x30\x30\x31\x03"; //\x09\x0D
+        public const string MuteToggleIrCmd = "\x01\x30\x2A\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x31\x42\x30\x33\x03"; //\x72\x0D
+        public const string MuteGetCmd = "\x01\x30\x2A\x30\x43\x30\x36\x02\x30\x30\x38\x44\x03"; //\x79\x0D
 
-		public const string MuteOffCmd = "\x01\x30\x41\x30\x45\x30\x41\x02\x30\x30\x38\x44\x30\x30\x30\x30\x03\x08\x0D";
-		public const string MuteOnCmd = "\x01\x30\x41\x30\x45\x30\x41\x02\x30\x30\x38\x44\x30\x30\x30\x31\x03\x09\x0D";
-		public const string MuteToggleIrCmd = "\x01\x30\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x31\x42\x30\x33\x03\x72\x0D";
-		public const string MuteGetCmd = "\x01\x30\x41\x30\x43\x30\x36\x02\x30\x30\x38\x44\x03\x79\x0D";
+        public const string PictureMuteOnCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x31\x30\x42\x36\x30\x30\x30\x31\x03";
+        public const string PictureMuteOffCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x31\x30\x42\x36\x30\x30\x30\x32\x03";
 
-		public const string VolumeGetCmd = "\x01\x30\x41\x30\x43\x30\x36\x02\x30\x30\x36\x32\x03\x01\x0D";
-		public const string VolumeLevelPartialCmd = "\x01\x30\x41\x30\x45\x30\x41\x02\x30\x30\x36\x32"; //\x46\x46\x46\x46\x03\xNN\x0D
-		public const string VolumeUpCmd = "\x01\x30\x41\x30\x45\x30\x41\x02\x31\x30\x41\x44\x30\x30\x30\x31\x03\x71\x0D";
-		public const string VolumeDownCmd = "\x01\x30\x41\x30\x45\x30\x41\x02\x31\x30\x41\x44\x30\x30\x30\x32\x03\x72\x0D";
+        public const string MatrixModeOnCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x32\x46\x33\x30\x30\x30\x31\x03";
+        public const string MatrixModeOffCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x32\x46\x33\x30\x30\x30\x32\x03";
+
+        public const string VolumeGetCmd = "\x01\x30\x2A\x30\x43\x30\x36\x02\x30\x30\x36\x32\x03"; //\x01\x0D
+		public const string VolumeLevelPartialCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x36\x32"; //\x46\x46\x46\x46\x03\xNN\x0D
+        public const string VolumeUpCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x31\x30\x41\x44\x30\x30\x30\x31\x03"; //\x71\x0D
+        public const string VolumeDownCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x31\x30\x41\x44\x30\x30\x30\x32\x03"; //\x72\x0D
 
 		public const string MenuIrCmd = "\x01\x30\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x32\x30\x30\x33\x03\x03\x0D";
 		public const string UpIrCmd = "\x01\x30\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x31\x35\x30\x33\x03\x05\x0D";
@@ -63,9 +71,23 @@ namespace PDT.NecDisplay.EPI
 		bool _IsWarmingUp;
 		bool _IsCoolingDown;
 		ushort _VolumeLevel;
-       ushort _CurrentInput;
+		ushort _CurrentInput;
 		bool _IsMuted;
-       ushort _DisplayID;
+
+		bool _VideoIsMuted;
+		public bool VideoIsMuted
+		{
+			get
+			{
+				return _VideoIsMuted;
+			}
+			set
+			{
+				_VideoIsMuted = value;
+				VideoIsMutedFeedback.FireUpdate();
+			}
+		}
+		public BoolFeedback VideoIsMutedFeedback;
        public ushort CurrentInput {
            get
            {
@@ -120,7 +142,7 @@ namespace PDT.NecDisplay.EPI
 		{
 			PortGather = new CommunicationGather(Communication, '\x0d');
 			PortGather.LineReceived += this.Port_LineReceived;
-			CommunicationMonitor = new GenericCommunicationMonitor(this, Communication, 30000, 120000, 300000, "xx\x0d");
+			CommunicationMonitor = new GenericCommunicationMonitor(this, Communication, 30000, 120000, 300000, Poll);
 
 			InputPorts.Add(new RoutingInputPort(RoutingPortNames.HdmiIn1, eRoutingSignalType.Audio | eRoutingSignalType.Video,
 				eRoutingPortConnectionType.Hdmi, new Action(InputHdmi1), this));
@@ -145,6 +167,7 @@ namespace PDT.NecDisplay.EPI
 
 			VolumeLevelFeedback = new IntFeedback(() => { return _VolumeLevel; });
 			MuteFeedback = new BoolFeedback(() => _IsMuted);
+			VideoIsMutedFeedback = new BoolFeedback (() => VideoIsMuted);
 
 
            CurrentInputFeedback = new IntFeedback(() => {return CurrentInput;} );
@@ -176,7 +199,7 @@ namespace PDT.NecDisplay.EPI
 
 		public void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
 		{
-			LinkDisplayToApi(this, trilist, joinStart, joinMapKey, bridge);
+			PdtNecDisplayBridge.LinkToApiExt(this, trilist, joinStart, joinMapKey);
 		}
 
 		public override FeedbackCollection<Feedback> Feedbacks
@@ -191,6 +214,22 @@ namespace PDT.NecDisplay.EPI
 				return list;
 			}
 		}
+		public void Poll()
+		{
+			AppendChecksumAndSend(PowerPoll);
+			switch (PollState)
+			{
+				case 0: 
+					
+					break;
+				
+				default:
+					PollState = 0;
+					return;
+			}
+			//PollState++; 
+			
+		}
 
 		void Port_LineReceived(object dev, GenericCommMethodReceiveTextArgs args)
 		{
@@ -199,16 +238,24 @@ namespace PDT.NecDisplay.EPI
 
 			if (args.Text == "DO SOMETHING HERE EVENTUALLY")
 			{
-				_IsMuted = true;
-				MuteFeedback.FireUpdate();
+
 			}
 		}
 
+        int CalculateChecksum(string s)
+        {
+            int x = 0;
+            for (int i = 1; i < s.Length; i++)
+                x = x ^ s[i];
+
+            return x;
+        }
+
 		void AppendChecksumAndSend(string s)
 		{
-			int x = 0;
-			for (int i = 1; i < s.Length; i++)
-				x = x ^ s[i];
+            int x;
+
+            x = CalculateChecksum(s);
 
 			string send = s + (char)x + '\x0d';
 			Send(send);
@@ -216,16 +263,15 @@ namespace PDT.NecDisplay.EPI
 
 		void Send(string s)
 		{
-           s[3] = _DisplayID;
-			if (Debug.Level == 2)
-				Debug.Console(2, this, "Send: '{0}'", ComTextHelper.GetEscapedText(s));
+			
+			Debug.Console(2, this, "Send: '{0}'", ComTextHelper.GetEscapedText(s));
 			Communication.SendText(s);
 		}
 
 
 		public override void PowerOn()
 		{
-			Send(PowerOnCmd);
+            AppendChecksumAndSend(PowerOnCmd);
 			if (!PowerIsOnFeedback.BoolValue && !_IsWarmingUp && !_IsCoolingDown)
 			{
 				_IsWarmingUp = true;
@@ -245,9 +291,7 @@ namespace PDT.NecDisplay.EPI
 		{
 			// If a display has unreliable-power off feedback, just override this and
 			// remove this check.
-			if (PowerIsOnFeedback.BoolValue && !_IsWarmingUp && !_IsCoolingDown)
-			{
-				Send(PowerOffCmd);
+                AppendChecksumAndSend(PowerOffCmd);
 				_IsCoolingDown = true;
 				_PowerIsOn = false;
 				PowerIsOnFeedback.FireUpdate();
@@ -259,7 +303,6 @@ namespace PDT.NecDisplay.EPI
 					_IsCoolingDown = false;
 					IsCoolingDownFeedback.FireUpdate();
 				}, CooldownTime);
-			}
 		}
 
 		public override void PowerToggle()
@@ -270,54 +313,90 @@ namespace PDT.NecDisplay.EPI
 				PowerOn();
 		}
 
+        public void PictureMuteOn()
+        {
+            AppendChecksumAndSend(PictureMuteOnCmd);
+			VideoIsMuted = true;
+        }
+
+        public void PictureMuteOff()
+        {
+            AppendChecksumAndSend(PictureMuteOffCmd);
+			VideoIsMuted = false;
+        }
+
+        public void PictureMuteToggle()
+        {
+			Debug.Console(2, this, "PictureMuteToggle: '{0}'", VideoIsMuted);
+			if (!VideoIsMuted)
+			{
+				PictureMuteOn();
+			}
+			else
+			{
+				PictureMuteOff();
+			}
+
+        }
+
+        public void MatrixModeOn()
+        {
+            AppendChecksumAndSend(MatrixModeOnCmd);
+        }
+
+        public void MatrixModeOff()
+        {
+            AppendChecksumAndSend(MatrixModeOffCmd);
+        }
+
 		public void InputHdmi1()
 		{
-			Send(Hdmi1Cmd);
+            AppendChecksumAndSend(Hdmi1Cmd);
 		}
 
 		public void InputHdmi2()
 		{
-			Send(Hdmi2Cmd);
+            AppendChecksumAndSend(Hdmi2Cmd);
 		}
 
 		public void InputHdmi3()
 		{
-			Send(Hdmi3Cmd);
+            AppendChecksumAndSend(Hdmi3Cmd);
 		}
 
 		public void InputHdmi4()
 		{
-			Send(Hdmi4Cmd);
+            AppendChecksumAndSend(Hdmi4Cmd);
 		}
 
 		public void InputDisplayPort1()
 		{
-			Send(Dp1Cmd);
+            AppendChecksumAndSend(Dp1Cmd);
 		}
 
 		public void InputDisplayPort2()
 		{
-			Send(Dp2Cmd);
+            AppendChecksumAndSend(Dp2Cmd);
 		}
 
 		public void InputDvi1()
 		{
-			Send(Dvi1Cmd);
+            AppendChecksumAndSend(Dvi1Cmd);
 		}
 
 		public void InputVideo1()
 		{
-			Send(Video1Cmd);
+            AppendChecksumAndSend(Video1Cmd);
 		}
 
 		public void InputVga()
 		{
-			Send(VgaCmd);
+            AppendChecksumAndSend(VgaCmd);
 		}
 
 		public void InputRgb()
 		{
-			Send(RgbCmd);
+            AppendChecksumAndSend(RgbCmd);
 		}
 
 		public override void ExecuteSwitch(object selector)
@@ -346,12 +425,12 @@ namespace PDT.NecDisplay.EPI
 
 		public void MuteOff()
 		{
-			Send(MuteOffCmd);
+            AppendChecksumAndSend(MuteOffCmd);
 		}
 
 		public void MuteOn()
 		{
-			Send(MuteOnCmd);
+            AppendChecksumAndSend(MuteOnCmd);
 		}
 
 		void IBasicVolumeWithFeedback.SetVolume(ushort level)
@@ -381,11 +460,6 @@ namespace PDT.NecDisplay.EPI
 			SetVolume(_VolumeLevel--);
 		}
 
-        public void DisplayID(ushort ID)
-        {
-            _DisplayID = ID;
-        }
-
 		#endregion
 	}
 
@@ -406,6 +480,5 @@ namespace PDT.NecDisplay.EPI
 				return null;
 		}
 	}
-
 
 }

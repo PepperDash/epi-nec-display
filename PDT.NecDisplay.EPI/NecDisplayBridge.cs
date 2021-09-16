@@ -11,24 +11,22 @@ using Newtonsoft.Json;
 
 namespace PDT.NecDisplay.EPI
 {
-	public static class NecDisplayBridge
+	 public static class PdtNecDisplayBridge
 	{
-
-
 		public static void LinkToApiExt(this PdtNecDisplay displayDevice, BasicTriList trilist, uint joinStart, string joinMapKey)
 		{
 
-				DisplayControllerJoinMap joinMap = new DisplayControllerJoinMap();
+				NecDisplayControllerJoinMap joinMap = new NecDisplayControllerJoinMap();
 
 				var JoinMapSerialized = JoinMapHelper.GetJoinMapForDevice(joinMapKey);
 
 				if (!string.IsNullOrEmpty(JoinMapSerialized))
-					joinMap = JsonConvert.DeserializeObject<DisplayControllerJoinMap>(JoinMapSerialized);
+					joinMap = JsonConvert.DeserializeObject<NecDisplayControllerJoinMap>(JoinMapSerialized);
 
 				joinMap.OffsetJoinNumbers(joinStart);
 
-				Debug.Console(1, "Linking to Trilist '{0}'",trilist.ID.ToString("X"));
-				Debug.Console(0, "Linking to Display: {0}", displayDevice.Name);
+				Debug.Console(1, "*** Linking to Trilist '{0}'",trilist.ID.ToString("X"));
+				Debug.Console(0, "*** Linking to Display: {0}", displayDevice.Name);
 
                 trilist.StringInput[joinMap.Name].StringValue = displayDevice.Name;	
 				
@@ -67,6 +65,37 @@ namespace PDT.NecDisplay.EPI
 					{
 						displayDevice.PowerOn();
 					});
+                
+                // Picture Mute
+                trilist.SetSigTrueAction(joinMap.PictureMuteOn, () =>
+                    {
+                        displayDevice.PictureMuteOn();
+                    });
+               
+                trilist.SetSigTrueAction(joinMap.PictureMuteOff, () =>
+                {
+                    displayDevice.PictureMuteOff();
+                });
+                
+                trilist.SetSigTrueAction(joinMap.PictureMuteToggle, () =>
+                {
+                    displayDevice.PictureMuteToggle();
+                });
+
+				displayDevice.VideoIsMutedFeedback.LinkInputSig(trilist.BooleanInput[joinMap.PictureMuteOn]);
+				displayDevice.VideoIsMutedFeedback.LinkComplementInputSig(trilist.BooleanInput[joinMap.PictureMuteOff]);
+
+                // Matrix Mode
+                trilist.SetSigTrueAction(joinMap.MatrixModeOn, () =>
+                {
+                    displayDevice.MatrixModeOn();
+                });
+
+                trilist.SetSigTrueAction(joinMap.MatrixModeOff, () =>
+                {
+                    displayDevice.MatrixModeOff();
+                });
+
 
 				
 				displayDevice.PowerIsOnFeedback.LinkInputSig(trilist.BooleanInput[joinMap.PowerOn]);
@@ -205,7 +234,7 @@ namespace PDT.NecDisplay.EPI
 
 
 	}
-    public class DisplayControllerJoinMap : JoinMapBase
+    public class NecDisplayControllerJoinMap : JoinMapBase
 	{
         // Digital
         public uint PowerOff { get; set; }
@@ -217,6 +246,11 @@ namespace PDT.NecDisplay.EPI
         public uint InputSelectOffset { get; set; }
          public uint ButtonVisibilityOffset { get; set; }
         public uint IsOnline { get; set; }
+        public uint PictureMuteOff { get; set; }
+        public uint PictureMuteOn { get; set; }
+        public uint PictureMuteToggle { get; set; }
+        public uint MatrixModeOff { get; set; }
+        public uint MatrixModeOn { get; set; }
 
         // Analog
         public uint InputSelect { get; set; }
@@ -227,7 +261,7 @@ namespace PDT.NecDisplay.EPI
         public uint InputNamesOffset { get; set; }
 
 
-		public DisplayControllerJoinMap()
+		public NecDisplayControllerJoinMap()
 		{
 			// Digital
             IsOnline = 50;
@@ -237,6 +271,13 @@ namespace PDT.NecDisplay.EPI
             VolumeUp = 5;
             VolumeDown = 6;
             VolumeMute = 7;
+
+            PictureMuteOff = 21;
+            PictureMuteOn = 22;
+            PictureMuteToggle = 23;
+
+            MatrixModeOff = 41;
+            MatrixModeOn = 42;
 
             ButtonVisibilityOffset = 40;
             InputSelectOffset = 10;
@@ -257,11 +298,16 @@ namespace PDT.NecDisplay.EPI
 			IsOnline = IsOnline + joinOffset;
 			PowerOff = PowerOff + joinOffset;
 			PowerOn = PowerOn + joinOffset;
+            PictureMuteOff = PictureMuteOff + joinOffset;
+            PictureMuteOn = PictureMuteOn + joinOffset;
+            PictureMuteToggle = PictureMuteToggle + joinOffset;
             IsTwoWayDisplay = IsTwoWayDisplay + joinOffset;
 			ButtonVisibilityOffset = ButtonVisibilityOffset + joinOffset;
 			Name = Name + joinOffset;
 			InputNamesOffset = InputNamesOffset + joinOffset;
 			InputSelectOffset = InputSelectOffset + joinOffset;
+            MatrixModeOff = MatrixModeOff + joinOffset;
+            MatrixModeOn = MatrixModeOn + joinOffset;
 
             InputSelect = InputSelect + joinOffset;
 
