@@ -11,6 +11,7 @@ using PepperDash.Essentials.Core.Config;
 using PepperDash.Essentials.Core.Bridges;
 using PepperDash.Essentials.Core.Routing;
 using Feedback = PepperDash.Essentials.Core.Feedback;
+using Newtonsoft.Json.Linq;
 
 namespace PDT.NecDisplay.EPI
 {
@@ -24,47 +25,48 @@ namespace PDT.NecDisplay.EPI
 		public StatusMonitorBase CommunicationMonitor { get; private set; }
 		private int PollState = 0; 
 		#region Command constants
-        //Removed checksum and delimiter to use AddChecksumAndSend method. Using 2A instead of 41 for display '*'
-        public const string InputGetCmd = "\x01\x30\x2A\x30\x43\x30\x36\x02\x30\x30\x36\x30\x03"; //\x03\x0D
-        public const string Hdmi1Cmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x31\x31\x03"; //\x72\x0d
-        public const string Hdmi2Cmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x31\x32\x03"; //\x71\x0D
-        public const string Hdmi3Cmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x38\x32x03"; //\x78\x0D
-        public const string Hdmi4Cmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x38\x33\x03"; //\x79\x0D
-        public const string Dp1Cmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x46\x03"; //\x04\x0D
-        public const string Dp2Cmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x31\x30\x03"; //\x73\x0D
-        public const string Dvi1Cmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x33\x03"; //\x71\x0d
-        public const string Video1Cmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x35\x03"; //\x77\x0D
-        public const string VgaCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x31\x03"; //\x73\x0D
-        public const string RgbCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x32\x03"; //\x70\x0D
 
-        public const string PowerOnCmd = "\x01\x30\x2A\x30\x41\x30\x43\x02\x43\x32\x30\x33\x44\x36\x30\x30\x30\x31\x03"; //\x73\x0D
-        public const string PowerOffCmd = "\x01\x30\x2A\x30\x41\x30\x43\x02\x43\x32\x30\x33\x44\x36\x30\x30\x30\x34\x03"; //\x76\x0D
-        public const string PowerToggleIrCmd = "\x01\x30\x2A\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x30\x33\x30\x33\x03"; //\x02\x0D
-		public const string PowerPoll = "\x01\x30\x2A\x30\x41\x30\x36\x02\x30\x31\x64\x36\x03"; //\x02\x0D
-        
-		public const string MuteOffCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x38\x44\x30\x30\x30\x30\x03"; //\x08\x0D
-        public const string MuteOnCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x38\x44\x30\x30\x30\x31\x03"; //\x09\x0D
-        public const string MuteToggleIrCmd = "\x01\x30\x2A\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x31\x42\x30\x33\x03"; //\x72\x0D
-        public const string MuteGetCmd = "\x01\x30\x2A\x30\x43\x30\x36\x02\x30\x30\x38\x44\x03"; //\x79\x0D
+        public const string HeaderCmd = "\x01\x30";
+        public const string InputGetCmd = "\x30\x43\x30\x36\x02\x30\x30\x36\x30\x03"; 
+        public const string Hdmi1Cmd = "\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x31\x31\x03"; 
+        public const string Hdmi2Cmd = "\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x31\x32\x03"; 
+        public const string Hdmi3Cmd = "\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x38\x32x03"; 
+        public const string Hdmi4Cmd = "\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x38\x33\x03"; 
+        public const string Dp1Cmd = "\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x46\x03"; 
+        public const string Dp2Cmd = "\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x31\x30\x03"; 
+        public const string Dvi1Cmd = "\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x33\x03"; 
+        public const string Video1Cmd = "\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x35\x03"; 
+        public const string VgaCmd = "\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x31\x03"; 
+        public const string RgbCmd = "\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x32\x03"; 
 
-        public const string PictureMuteOnCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x31\x30\x42\x36\x30\x30\x30\x31\x03";
-        public const string PictureMuteOffCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x31\x30\x42\x36\x30\x30\x30\x32\x03";
+        public const string PowerOnCmd = "\x30\x41\x30\x43\x02\x43\x32\x30\x33\x44\x36\x30\x30\x30\x31\x03"; 
+        public const string PowerOffCmd = "\x30\x41\x30\x43\x02\x43\x32\x30\x33\x44\x36\x30\x30\x30\x34\x03"; 
+        public const string PowerToggleIrCmd = "\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x30\x33\x30\x33\x03"; 
+        public const string PowerPoll = "\x30\x41\x30\x36\x02\x30\x31\x64\x36\x03"; 
 
-        public const string MatrixModeOnCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x32\x46\x33\x30\x30\x30\x31\x03";
-        public const string MatrixModeOffCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x32\x46\x33\x30\x30\x30\x32\x03";
+        public const string MuteOffCmd = "\x30\x45\x30\x41\x02\x30\x30\x38\x44\x30\x30\x30\x30\x03"; 
+        public const string MuteOnCmd = "\x30\x45\x30\x41\x02\x30\x30\x38\x44\x30\x30\x30\x31\x03"; 
+        public const string MuteToggleIrCmd = "\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x31\x42\x30\x33\x03"; 
+        public const string MuteGetCmd = "\x30\x43\x30\x36\x02\x30\x30\x38\x44\x03";
 
-        public const string VolumeGetCmd = "\x01\x30\x2A\x30\x43\x30\x36\x02\x30\x30\x36\x32\x03"; //\x01\x0D
-		public const string VolumeLevelPartialCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x30\x30\x36\x32"; //\x46\x46\x46\x46\x03\xNN\x0D
-        public const string VolumeUpCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x31\x30\x41\x44\x30\x30\x30\x31\x03"; //\x71\x0D
-        public const string VolumeDownCmd = "\x01\x30\x2A\x30\x45\x30\x41\x02\x31\x30\x41\x44\x30\x30\x30\x32\x03"; //\x72\x0D
+        public const string PictureMuteOnCmd = "\x30\x45\x30\x41\x02\x31\x30\x42\x36\x30\x30\x30\x31\x03";
+        public const string PictureMuteOffCmd = "\x30\x45\x30\x41\x02\x31\x30\x42\x36\x30\x30\x30\x32\x03";
 
-		public const string MenuIrCmd = "\x01\x30\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x32\x30\x30\x33\x03\x03\x0D";
-		public const string UpIrCmd = "\x01\x30\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x31\x35\x30\x33\x03\x05\x0D";
-		public const string DownIrCmd = "\x01\x30\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x31\x34\x30\x33\x03\x04\x0D";
-		public const string LeftIrCmd = "\x01\x30\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x32\x31\x30\x33\x03\x02\x0D";
-		public const string RightIrCmd = "\x01\x30\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x32\x32\x30\x33\x03\x01\x0D";
-		public const string SelectIrCmd = "\x01\x30\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x32\x33\x30\x33\x03\x00\x0D";
-		public const string ExitIrCmd = "\x01\x30\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x31\x46\x30\x33\x03\x76\x0D";
+        public const string MatrixModeOnCmd = "\x30\x45\x30\x41\x02\x30\x32\x46\x33\x30\x30\x30\x31\x03";
+        public const string MatrixModeOffCmd = "\x30\x45\x30\x41\x02\x30\x32\x46\x33\x30\x30\x30\x32\x03";
+
+        public const string VolumeGetCmd = "\x30\x43\x30\x36\x02\x30\x30\x36\x32\x03"; 
+        public const string VolumeLevelPartialCmd = "\x30\x45\x30\x41\x02\x30\x30\x36\x32"; 
+        public const string VolumeUpCmd = "\x30\x45\x30\x41\x02\x31\x30\x41\x44\x30\x30\x30\x31\x03"; 
+        public const string VolumeDownCmd = "\x30\x45\x30\x41\x02\x31\x30\x41\x44\x30\x30\x30\x32\x03"; 
+
+        public const string MenuIrCmd = "\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x32\x30\x30\x33\x03\x03\x0D";
+        public const string UpIrCmd = "\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x31\x35\x30\x33\x03\x05\x0D";
+        public const string DownIrCmd = "\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x31\x34\x30\x33\x03\x04\x0D";
+        public const string LeftIrCmd = "\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x32\x31\x30\x33\x03\x02\x0D";
+        public const string RightIrCmd = "\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x32\x32\x30\x33\x03\x01\x0D";
+        public const string SelectIrCmd = "\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x32\x33\x30\x33\x03\x00\x0D";
+        public const string ExitIrCmd = "\x41\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x31\x46\x30\x33\x03\x76\x0D";
 		#endregion
 
 		bool _PowerIsOn;
@@ -73,6 +75,7 @@ namespace PDT.NecDisplay.EPI
 		ushort _VolumeLevel;
 		ushort _CurrentInput;
 		bool _IsMuted;
+       byte _ID;
 
 		bool _VideoIsMuted;
 		public bool VideoIsMuted
@@ -109,31 +112,45 @@ namespace PDT.NecDisplay.EPI
 	
 
 		/// <summary>
-		/// Constructor for IBasicCommunication
+		/// Constructor for IBasicCommunication with id passed from the device properties in the config file
 		/// </summary>
-		public PdtNecDisplay(string key, string name, IBasicCommunication comm)
+        public PdtNecDisplay(string key, string name, IBasicCommunication comm, string id)
 			: base(key, name)
 		{
-			Communication = comm;
+           _ID = id == null ? (byte)0x00 : Convert.ToByte(id); 
+           Communication = comm;
 			Init();
 		}
+
+        /// <summary>
+        /// Constructor for IBasicCommunication when no id is in the properties of the config file
+        /// </summary>
+        public PdtNecDisplay(string key, string name, IBasicCommunication comm)
+            : base(key, name)
+        {
+            _ID = (byte)0x00; 
+            Communication = comm;
+            Init();
+        }
+
 		/// <summary>
 		/// Constructor for TCP
 		/// </summary>
-		public PdtNecDisplay(string key, string name, string hostname, int port)
+        public PdtNecDisplay(string key, string name, string hostname, int port, string id)
 			: base(key, name)
 		{
+            _ID = id == null ? (byte)0x00 : Convert.ToByte(id);
 			Communication = new GenericTcpIpClient(key + "-tcp", hostname, port, 5000);
 			Init();
 		}
 
-
 		/// <summary>
 		/// Constructor for COM
 		/// </summary>
-		public PdtNecDisplay(string key, string name, ComPort port, ComPort.ComPortSpec spec)
+        public PdtNecDisplay(string key, string name, ComPort port, ComPort.ComPortSpec spec, string id)
 			: base(key, name)
 		{
+            _ID = id == null ? (byte)0x2A : Convert.ToByte(id); // If id is null, set default value of 0x2A (all displays command in NEC), otherwise assign value passed in constructor
 			Communication = new ComPortController(key + "-com", port, spec);
 			Init();
 		}
@@ -255,6 +272,15 @@ namespace PDT.NecDisplay.EPI
 		{
             int x;
 
+            if (Convert.ToInt16(_ID) == 0)
+            {
+               s = HeaderCmd + "\x2a" + s;
+            }
+            else
+            {
+               s = HeaderCmd + Convert.ToChar(Convert.ToInt16(_ID) + Convert.ToInt16('\x40')).ToString() + s;
+            }
+ 
             x = CalculateChecksum(s);
 
 			string send = s + (char)x + '\x0d';
@@ -263,7 +289,6 @@ namespace PDT.NecDisplay.EPI
 
 		void Send(string s)
 		{
-			
 			Debug.Console(2, this, "Send: '{0}'", ComTextHelper.GetEscapedText(s));
 			Communication.SendText(s);
 		}
@@ -475,7 +500,16 @@ namespace PDT.NecDisplay.EPI
 			Debug.Console(1, "Factory Attempting to create new Generic Comm Device");
 			var comm = CommFactory.CreateCommForDevice(dc);
 			if (comm != null)
-				return new PdtNecDisplay(dc.Key, dc.Name, comm);
+                try
+                {
+                    var newMe = new PdtNecDisplay(dc.Key, dc.Name, comm, dc.Properties["id"].Value<string>());
+                    return newMe;
+                }
+                catch
+                {
+                    var newMe = new PdtNecDisplay(dc.Key, dc.Name, comm);
+                    return newMe;
+                }
 			else
 				return null;
 		}

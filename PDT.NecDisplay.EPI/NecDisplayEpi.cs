@@ -25,8 +25,18 @@ namespace PDT.NecDisplay.EPI
 		{
 			var config = JsonConvert.DeserializeObject<DeviceConfig>(dc.Properties.ToString());
 			var comm = CommFactory.CreateCommForDevice(dc);
-			var newMe = new PdtNecDisplay(dc.Key, dc.Name, comm);
-			return newMe;
+            try
+            {
+               // if there is no id in the config file an exception is thrown
+               var newMe = new PdtNecDisplay(dc.Key, dc.Name, comm, dc.Properties["id"].Value<string>());
+               return newMe;
+            }
+            catch
+            {
+                // if there is no id in the config file an exception is thrown.  id will default to (0x2a) the all displays command
+                var newMe = new PdtNecDisplay(dc.Key, dc.Name, comm);
+                return newMe;
+            }
 		}
 	}
 }
