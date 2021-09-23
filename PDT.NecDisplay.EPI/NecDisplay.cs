@@ -117,7 +117,7 @@ namespace PDT.NecDisplay.EPI
         public PdtNecDisplay(string key, string name, IBasicCommunication comm, string id)
 			: base(key, name)
 		{
-           _ID = id == null ? (byte)0x00 : Convert.ToByte(id); 
+           _ID = id == null ? (byte)0x2A : Convert.ToByte(id); 
            Communication = comm;
 			Init();
 		}
@@ -128,7 +128,7 @@ namespace PDT.NecDisplay.EPI
         public PdtNecDisplay(string key, string name, IBasicCommunication comm)
             : base(key, name)
         {
-            _ID = (byte)0x00; 
+            _ID = (byte)0x2A; 
             Communication = comm;
             Init();
         }
@@ -139,7 +139,7 @@ namespace PDT.NecDisplay.EPI
         public PdtNecDisplay(string key, string name, string hostname, int port, string id)
 			: base(key, name)
 		{
-            _ID = id == null ? (byte)0x00 : Convert.ToByte(id);
+            _ID = id == null ? (byte)0x2A : Convert.ToByte(id);
 			Communication = new GenericTcpIpClient(key + "-tcp", hostname, port, 5000);
 			Init();
 		}
