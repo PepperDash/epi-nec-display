@@ -448,9 +448,9 @@ namespace PDT.NecDisplay.EPI
 
 		public BoolFeedback MuteFeedback { get; private set; }
 
+#if SERIES4
         public ISelectableItems<string> Inputs{ get; private set; }
 
-#if SERIES4
 		private void SetupInputs()
 		{
 			Inputs = new NecInputs
