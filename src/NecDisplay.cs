@@ -1,25 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Crestron.SimplSharp;
+﻿using Crestron.SimplSharp;
 using Crestron.SimplSharpPro;
 using Crestron.SimplSharpPro.DeviceSupport;
+using Newtonsoft.Json;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
-using PepperDash.Essentials.Core.Config;
 using PepperDash.Essentials.Core.Bridges;
-using PepperDash.Essentials.Core.Routing;
-using Feedback = PepperDash.Essentials.Core.Feedback;
-using Newtonsoft.Json.Linq;
+using PepperDash.Essentials.Core.Config;
 using PepperDash.Essentials.Core.DeviceTypeInterfaces;
+using System;
+using System.Collections.Generic;
+using Feedback = PepperDash.Essentials.Core.Feedback;
 
 namespace PDT.NecDisplay.EPI
 {
-	/// <summary>
-	/// 
-	/// </summary>
-	public class PdtNecDisplay : TwoWayDisplayBase, IBasicVolumeWithFeedback, ICommunicationMonitor, IBridgeAdvanced
+    /// <summary>
+    /// 
+    /// </summary>
+    public class PdtNecDisplay : TwoWayDisplayBase, IBasicVolumeWithFeedback, ICommunicationMonitor, IBridgeAdvanced
 #if SERIES4
 		, IHasInputs<string>
 #endif
@@ -118,6 +115,16 @@ namespace PDT.NecDisplay.EPI
         {
             get { return () => CurrentInput; }
         }
+
+        public PdtNecDisplay(string key, string name, IBasicCommunication comm, NecDisplayConfigObject props)
+    : base(key, name)
+        {
+			var id = props.ID;
+            _ID = id == null ? (byte)0x2A : Convert.ToByte(id);
+            Communication = comm;
+            Init();
+        }
+
 
 
         /// <summary>
@@ -519,7 +526,7 @@ namespace PDT.NecDisplay.EPI
 	{
 		public NecPSXMDisplayFactory()
 		{
-			TypeNames = new List<string>() { "necmpsx" };
+			TypeNames = new List<string>() { "necmpsx", "necdisplay" };
 		}
 
 		public override EssentialsDevice BuildDevice(DeviceConfig dc)
@@ -529,13 +536,14 @@ namespace PDT.NecDisplay.EPI
 			if (comm != null)
                 try
                 {
-                    var newMe = new PdtNecDisplay(dc.Key, dc.Name, comm, dc.Properties["id"].Value<string>());
-                    return newMe;
+                    var props = JsonConvert.DeserializeObject<NecDisplayConfigObject>(dc.Properties.ToString());
+
+                    return new PdtNecDisplay(dc.Key, dc.Name, comm, props);
                 }
                 catch
                 {
-                    var newMe = new PdtNecDisplay(dc.Key, dc.Name, comm);
-                    return newMe;
+                    
+                    return new PdtNecDisplay(dc.Key, dc.Name, comm);
                 }
 			else
 				return null;
