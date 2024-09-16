@@ -1,26 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Crestron.SimplSharp;
+﻿using Crestron.SimplSharp;
 using Crestron.SimplSharpPro;
 using Crestron.SimplSharpPro.DeviceSupport;
+using Newtonsoft.Json;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
-using PepperDash.Essentials.Core.Config;
 using PepperDash.Essentials.Core.Bridges;
-using PepperDash.Essentials.Core.Routing;
-using Feedback = PepperDash.Essentials.Core.Feedback;
-using Newtonsoft.Json.Linq;
+using PepperDash.Essentials.Core.Config;
 using PepperDash.Essentials.Core.DeviceTypeInterfaces;
-using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using Feedback = PepperDash.Essentials.Core.Feedback;
 
 namespace PDT.NecDisplay.EPI
 {
-	/// <summary>
-	/// 
-	/// </summary>
-	public class PdtNecDisplay : PepperDash.Essentials.Devices.Common.Displays.TwoWayDisplayBase, IBasicVolumeWithFeedback, ICommunicationMonitor, IBridgeAdvanced
+    /// <summary>
+    /// 
+    /// </summary>
+    public class PdtNecDisplay : PepperDash.Essentials.Devices.Common.Displays.TwoWayDisplayBase, IBasicVolumeWithFeedback, ICommunicationMonitor, IBridgeAdvanced
 #if SERIES4
 		, IHasInputs<string>
 #endif
