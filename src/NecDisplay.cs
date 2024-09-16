@@ -20,7 +20,7 @@ namespace PDT.NecDisplay.EPI
 	/// <summary>
 	/// 
 	/// </summary>
-	public class PdtNecDisplay : TwoWayDisplayBase, IBasicVolumeWithFeedback, ICommunicationMonitor, IBridgeAdvanced
+	public class PdtNecDisplay : PepperDash.Essentials.Devices.Common.Displays.TwoWayDisplayBase, IBasicVolumeWithFeedback, ICommunicationMonitor, IBridgeAdvanced
 #if SERIES4
 		, IHasInputs<string>
 #endif
