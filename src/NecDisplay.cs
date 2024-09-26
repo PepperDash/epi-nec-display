@@ -7,8 +7,10 @@ using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
 using PepperDash.Essentials.Core.Config;
 using PepperDash.Essentials.Core.DeviceTypeInterfaces;
+using PepperDash.Essentials.Core.Queues;
 using System;
 using System.Collections.Generic;
+using System.Text;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 
 namespace PDT.NecDisplay.EPI
@@ -24,14 +26,16 @@ namespace PDT.NecDisplay.EPI
 		public IBasicCommunication Communication { get; private set; }
 		public CommunicationGather PortGather { get; private set; }
 		public StatusMonitorBase CommunicationMonitor { get; private set; }
-		private int PollState = 0; 
+		private int PollState = 0;
 		#region Command constants
+
+		private GenericQueue _transmitQueue;
 
         public const string HeaderCmd = "\x01\x30";
         public const string InputGetCmd = "\x30\x43\x30\x36\x02\x30\x30\x36\x30\x03"; 
         public const string Hdmi1Cmd = "\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x31\x31\x03"; 
         public const string Hdmi2Cmd = "\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x31\x32\x03"; 
-        public const string Hdmi3Cmd = "\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x38\x32x03"; 
+        public const string Hdmi3Cmd = "\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x38\x32\x03"; 
         public const string Hdmi4Cmd = "\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x38\x33\x03"; 
         public const string Dp1Cmd = "\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x46\x03"; 
         public const string Dp2Cmd = "\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x31\x30\x03"; 
@@ -173,9 +177,13 @@ namespace PDT.NecDisplay.EPI
 
 		void Init()
 		{
-			PortGather = new CommunicationGather(Communication, '\x0d');
+
+			_transmitQueue = new GenericQueue(600, "transmit");
+
+            PortGather = new CommunicationGather(Communication, '\x0D');
 			PortGather.LineReceived += this.Port_LineReceived;
-			CommunicationMonitor = new GenericCommunicationMonitor(this, Communication, 30000, 120000, 300000, Poll);
+
+            CommunicationMonitor = new GenericCommunicationMonitor(this, Communication, 15000, 120000, 300000, Poll);
 
 			InputPorts.Add(new RoutingInputPort(RoutingPortNames.HdmiIn1, eRoutingSignalType.Audio | eRoutingSignalType.Video,
 				eRoutingPortConnectionType.Hdmi, new Action(InputHdmi1), this));
@@ -207,7 +215,7 @@ namespace PDT.NecDisplay.EPI
 #endif
 		}
 
-		~PdtNecDisplay()
+        ~PdtNecDisplay()
 		{
 			PortGather = null;
 		}
@@ -241,6 +249,7 @@ namespace PDT.NecDisplay.EPI
 		public void Poll()
 		{
 			AppendChecksumAndSend(PowerPoll);
+			AppendChecksumAndSend(InputGetCmd);
 			switch (PollState)
 			{
 				case 0: 
@@ -250,21 +259,61 @@ namespace PDT.NecDisplay.EPI
 				default:
 					PollState = 0;
 					return;
-			}
-			//PollState++; 
-			
+			}		
 		}
 
 		void Port_LineReceived(object dev, GenericCommMethodReceiveTextArgs args)
 		{
-			if (Debug.Level == 2)
-				Debug.Console(2, this, "Received: '{0}'", ComTextHelper.GetEscapedText(args.Text));
+			// Temp debug
+			if (Debug.Level == 0)
+				Debug.Console(0, this, "Gathered: '{0}'", ComTextHelper.GetEscapedText(args.Text));
 
-			if (args.Text == "DO SOMETHING HERE EVENTUALLY")
+
+			var bytes = Encoding.GetEncoding(28591).GetBytes(args.Text);
+
+			if (bytes[3] == _ID + 0x40)
 			{
+				Debug.Console(0, this, "ID Match!");
 
+				if (bytes.Length > 24 && bytes[16] == 0x30 && bytes[17] == 0x30 && bytes[18] == 0x30 && bytes[19] == 0x34)
+				{
+					Debug.Console(0, this, "Power State Response...");
+
+					switch (bytes[23])
+					{
+						case 0x31:
+							{
+								Debug.Console(0, this, "Device is On");
+								_PowerIsOn = true;
+								PowerIsOnFeedback.FireUpdate();
+								break;
+							}
+						case 0x32:
+							{
+								Debug.Console(0, this, "Device is in Standby");
+								_PowerIsOn = true;
+								PowerIsOnFeedback.FireUpdate();
+								break;
+							}
+						case 0x34:
+							{
+								Debug.Console(0, this, "Device is Off");
+								_PowerIsOn = false;
+								PowerIsOnFeedback.FireUpdate();
+								break;
+							}
+						default:
+							break;
+					}
+				}
 			}
 		}
+
+
+        private void Communication_BytesReceived(object sender, GenericCommMethodReceiveBytesArgs e)
+        {
+			Debug.Console(0, this, "Received Bytes: '{0}'", ComTextHelper.GetEscapedText(e.Bytes));
+        }
 
         int CalculateChecksum(string s)
         {
@@ -279,7 +328,7 @@ namespace PDT.NecDisplay.EPI
 		{
             int x;
 
-            if (Convert.ToInt16(_ID) == 0)
+            if (Convert.ToInt16(_ID) == 0 || _ID == 0x2A)
             {
                s = HeaderCmd + "\x2a" + s;
             }
@@ -296,14 +345,18 @@ namespace PDT.NecDisplay.EPI
 
 		void Send(string s)
 		{
-			Debug.Console(2, this, "Send: '{0}'", ComTextHelper.GetEscapedText(s));
-			Communication.SendText(s);
+            // Temp debug
+            Debug.Console(0, this, "Send: '{0}'", ComTextHelper.GetEscapedText(s));
+			var bytes = Encoding.GetEncoding(28591).GetBytes(s);
+			_transmitQueue.Enqueue(new ComsMessage(Communication, bytes));
+			//Communication.SendText(s);
 		}
 
 
 		public override void PowerOn()
 		{
             AppendChecksumAndSend(PowerOnCmd);
+			Poll();
 			if (!PowerIsOnFeedback.BoolValue && !_IsWarmingUp && !_IsCoolingDown)
 			{
 				_IsWarmingUp = true;
@@ -312,9 +365,7 @@ namespace PDT.NecDisplay.EPI
 				WarmupTimer = new CTimer(o =>
 				{
 					_IsWarmingUp = false;
-					_PowerIsOn = true;
 					IsWarmingUpFeedback.FireUpdate();
-					PowerIsOnFeedback.FireUpdate();
 				}, WarmupTime);
 			}
 		}
@@ -324,9 +375,8 @@ namespace PDT.NecDisplay.EPI
 			// If a display has unreliable-power off feedback, just override this and
 			// remove this check.
                 AppendChecksumAndSend(PowerOffCmd);
+				Poll();
 				_IsCoolingDown = true;
-				_PowerIsOn = false;
-				PowerIsOnFeedback.FireUpdate();
 				IsCoolingDownFeedback.FireUpdate();
 				// Fake cool-down cycle
 				CooldownTimer = new CTimer(o =>
