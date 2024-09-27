@@ -10,6 +10,7 @@ using PepperDash.Essentials.Core.DeviceTypeInterfaces;
 using PepperDash.Essentials.Core.Queues;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 
@@ -32,7 +33,8 @@ namespace PDT.NecDisplay.EPI
 		private GenericQueue _transmitQueue;
 
         public const string HeaderCmd = "\x01\x30";
-        public const string InputGetCmd = "\x30\x43\x30\x36\x02\x30\x30\x36\x30\x03"; 
+        public const string InputGetCmd = "\x30\x43\x30\x36\x02\x30\x30\x36\x30\x03";
+		public const string InputGetCmdAlt = "\x30\x43\x30\x36\x02\x31\x31\x30\x36\x03";
         public const string Hdmi1Cmd = "\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x31\x31\x03"; 
         public const string Hdmi2Cmd = "\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x31\x32\x03"; 
         public const string Hdmi3Cmd = "\x30\x45\x30\x41\x02\x31\x31\x30\x36\x30\x30\x38\x32\x03"; 
@@ -47,7 +49,7 @@ namespace PDT.NecDisplay.EPI
         public const string PowerOnCmd = "\x30\x41\x30\x43\x02\x43\x32\x30\x33\x44\x36\x30\x30\x30\x31\x03"; 
         public const string PowerOffCmd = "\x30\x41\x30\x43\x02\x43\x32\x30\x33\x44\x36\x30\x30\x30\x34\x03"; 
         public const string PowerToggleIrCmd = "\x30\x41\x30\x43\x02\x43\x32\x31\x30\x30\x30\x30\x33\x30\x33\x03"; 
-        public const string PowerPoll = "\x30\x41\x30\x36\x02\x30\x31\x64\x36\x03"; 
+        public const string PowerPoll = "\x30\x41\x30\x36\x02\x30\x31\x44\x36\x03"; 
 
         public const string MuteOffCmd = "\x30\x45\x30\x41\x02\x30\x30\x38\x44\x30\x30\x30\x30\x03"; 
         public const string MuteOnCmd = "\x30\x45\x30\x41\x02\x30\x30\x38\x44\x30\x30\x30\x31\x03"; 
@@ -249,7 +251,7 @@ namespace PDT.NecDisplay.EPI
 		public void Poll()
 		{
 			AppendChecksumAndSend(PowerPoll);
-			AppendChecksumAndSend(InputGetCmd);
+			AppendChecksumAndSend(InputGetCmdAlt);
 			switch (PollState)
 			{
 				case 0: 
@@ -265,39 +267,39 @@ namespace PDT.NecDisplay.EPI
 		void Port_LineReceived(object dev, GenericCommMethodReceiveTextArgs args)
 		{
 			// Temp debug
-			if (Debug.Level == 0)
-				Debug.Console(0, this, "Gathered: '{0}'", ComTextHelper.GetEscapedText(args.Text));
+			if (Debug.Level == 2)
+				Debug.Console(2, this, "Gathered: '{0}'", ComTextHelper.GetEscapedText(args.Text));
 
 
 			var bytes = Encoding.GetEncoding(28591).GetBytes(args.Text);
 
 			if (bytes[3] == _ID + 0x40)
 			{
-				Debug.Console(0, this, "ID Match!");
+				Debug.Console(1, this, "ID Match!");
 
-				if (bytes.Length > 24 && bytes[16] == 0x30 && bytes[17] == 0x30 && bytes[18] == 0x30 && bytes[19] == 0x34)
+				if (bytes.Length > 20 && bytes[16] == 0x30 && bytes[17] == 0x30 && bytes[18] == 0x30 && bytes[19] == 0x34)
 				{
-					Debug.Console(0, this, "Power State Response...");
+					Debug.Console(1, this, "Power State Response...");
 
 					switch (bytes[23])
 					{
 						case 0x31:
 							{
-								Debug.Console(0, this, "Device is On");
+								Debug.Console(1, this, "Device is On");
 								_PowerIsOn = true;
 								PowerIsOnFeedback.FireUpdate();
 								break;
 							}
 						case 0x32:
 							{
-								Debug.Console(0, this, "Device is in Standby");
+								Debug.Console(1, this, "Device is in Standby");
 								_PowerIsOn = true;
 								PowerIsOnFeedback.FireUpdate();
 								break;
 							}
 						case 0x34:
 							{
-								Debug.Console(0, this, "Device is Off");
+								Debug.Console(1, this, "Device is Off");
 								_PowerIsOn = false;
 								PowerIsOnFeedback.FireUpdate();
 								break;
@@ -306,14 +308,28 @@ namespace PDT.NecDisplay.EPI
 							break;
 					}
 				}
+				else if(bytes.Length > 20 && bytes[9] == 0x31 && bytes[10] == 0x31 && bytes[11] == 0x30 && bytes[12] == 0x36)
+				{
+					Debug.Console(1, this, "Input State Response...");
+
+					// Compare the relevant portion of the response to the key for each input to find a match
+					foreach(var input in Inputs.Items)
+					{
+                        if (input.Key.Equals(Encoding.GetEncoding(28591).GetString(bytes, 3, 14)))
+						{
+							Debug.Console(1, this, "Input Match: {0}", input.Value.Name);
+                            input.Value.IsSelected = true;
+                            Inputs.CurrentItem = input.Value.Name;
+                            CurrentInput = input.Value.Name;
+                        }
+						else
+						{
+							input.Value.IsSelected = false;
+						}
+                    }
+				}
 			}
 		}
-
-
-        private void Communication_BytesReceived(object sender, GenericCommMethodReceiveBytesArgs e)
-        {
-			Debug.Console(0, this, "Received Bytes: '{0}'", ComTextHelper.GetEscapedText(e.Bytes));
-        }
 
         int CalculateChecksum(string s)
         {
