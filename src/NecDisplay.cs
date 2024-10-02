@@ -1,6 +1,7 @@
 ﻿using Crestron.SimplSharp;
 using Crestron.SimplSharpPro;
 using Crestron.SimplSharpPro.DeviceSupport;
+using Crestron.SimplSharpPro.GeneralIO;
 using Newtonsoft.Json;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
@@ -266,40 +267,37 @@ namespace PDT.NecDisplay.EPI
 
 		void Port_LineReceived(object dev, GenericCommMethodReceiveTextArgs args)
 		{
-			// Temp debug
-			if (Debug.Level == 2)
-				Debug.Console(2, this, "Gathered: '{0}'", ComTextHelper.GetEscapedText(args.Text));
-
+			//Debug.Console(2, this, "Gathered: '{0}'", ComTextHelper.GetEscapedText(args.Text));
 
 			var bytes = Encoding.GetEncoding(28591).GetBytes(args.Text);
 
 			if (bytes[3] == _ID + 0x40)
 			{
-				Debug.Console(1, this, "ID Match!");
+				//Debug.Console(2, this, "ID Match!");
 
-				if (bytes.Length > 20 && bytes[16] == 0x30 && bytes[17] == 0x30 && bytes[18] == 0x30 && bytes[19] == 0x34)
+				if (bytes.Length > 20 && (bytes[9] == 0x32 && bytes[10] == 0x30 && bytes[11] == 0x30 && bytes[12] == 0x44 && bytes[13] == 0x36))
 				{
-					Debug.Console(1, this, "Power State Response...");
+					//Debug.Console(2, this, "Power State Response...");
 
 					switch (bytes[23])
 					{
-						case 0x31:
-							{
-								Debug.Console(1, this, "Device is On");
-								_PowerIsOn = true;
-								PowerIsOnFeedback.FireUpdate();
-								break;
-							}
+						//case 0x31:
+						//	{
+						//		Debug.Console(0, this, "Device is On");
+						//		_PowerIsOn = true;
+						//		PowerIsOnFeedback.FireUpdate();
+						//		break;
+						//	}
 						case 0x32:
 							{
-								Debug.Console(1, this, "Device is in Standby");
-								_PowerIsOn = true;
+								//Debug.Console(2, this, "Device is in Standby");
+								_PowerIsOn = false;
 								PowerIsOnFeedback.FireUpdate();
 								break;
 							}
 						case 0x34:
 							{
-								Debug.Console(1, this, "Device is Off");
+								//Debug.Console(2, this, "Device is Off");
 								_PowerIsOn = false;
 								PowerIsOnFeedback.FireUpdate();
 								break;
@@ -308,25 +306,43 @@ namespace PDT.NecDisplay.EPI
 							break;
 					}
 				}
-				else if(bytes.Length > 20 && bytes[9] == 0x31 && bytes[10] == 0x31 && bytes[11] == 0x30 && bytes[12] == 0x36)
+				else if (bytes.Length > 20 && (bytes[9] == 0x30 && bytes[10] == 0x43 && bytes[11] == 0x32 && bytes[12] == 0x30 && bytes[13] == 0x33))
 				{
-					Debug.Console(1, this, "Input State Response...");
+					//Debug.Console(2, this, "Power State Response...");
+
+					switch (bytes[19])
+					{
+						case 0x31:
+							{
+								//Debug.Console(2, this, "Device is On");
+								_PowerIsOn = true;
+								PowerIsOnFeedback.FireUpdate();
+								break;
+							}
+						default:
+							break;
+					}
+				}
+				else if (bytes.Length > 20 && (bytes[10] == 0x31 && bytes[11] == 0x31 && bytes[12] == 0x30 && bytes[13] == 0x36 ||
+					bytes[10] == 0x30 && bytes[11] == 0x30 && bytes[12] == 0x36 && bytes[13] == 0x30))
+				{
+					//Debug.Console(2, this, "Input State Response...");
 
 					// Compare the relevant portion of the response to the key for each input to find a match
-					foreach(var input in Inputs.Items)
+					foreach (var input in Inputs.Items)
 					{
-                        if (input.Key.Equals(Encoding.GetEncoding(28591).GetString(bytes, 3, 14)))
+						if (input.Key.Equals(Encoding.GetEncoding(28591).GetString(bytes, 14, 10)))
 						{
-							Debug.Console(1, this, "Input Match: {0}", input.Value.Name);
-                            input.Value.IsSelected = true;
-                            Inputs.CurrentItem = input.Value.Name;
-                            CurrentInput = input.Value.Name;
-                        }
+							//Debug.Console(2, this, "Input Match: {0}", input.Value.Name);
+							input.Value.IsSelected = true;
+							Inputs.CurrentItem = input.Value.Name;
+							CurrentInput = input.Value.Name;
+						}
 						else
 						{
 							input.Value.IsSelected = false;
 						}
-                    }
+					}
 				}
 			}
 		}
@@ -362,7 +378,7 @@ namespace PDT.NecDisplay.EPI
 		void Send(string s)
 		{
             // Temp debug
-            Debug.Console(0, this, "Send: '{0}'", ComTextHelper.GetEscapedText(s));
+            //Debug.Console(2, this, "Send: '{0}'", ComTextHelper.GetEscapedText(s));
 			var bytes = Encoding.GetEncoding(28591).GetBytes(s);
 			_transmitQueue.Enqueue(new ComsMessage(Communication, bytes));
 			//Communication.SendText(s);
@@ -450,54 +466,64 @@ namespace PDT.NecDisplay.EPI
 		public void InputHdmi1()
 		{
             AppendChecksumAndSend(Hdmi1Cmd);
+			Poll();
 		}
 
 		public void InputHdmi2()
 		{
             AppendChecksumAndSend(Hdmi2Cmd);
-		}
+            Poll();
+        }
 
-		public void InputHdmi3()
+        public void InputHdmi3()
 		{
             AppendChecksumAndSend(Hdmi3Cmd);
-		}
+            Poll();
+        }
 
-		public void InputHdmi4()
+        public void InputHdmi4()
 		{
             AppendChecksumAndSend(Hdmi4Cmd);
-		}
+            Poll();
+        }
 
-		public void InputDisplayPort1()
+        public void InputDisplayPort1()
 		{
             AppendChecksumAndSend(Dp1Cmd);
-		}
+            Poll();
+        }
 
-		public void InputDisplayPort2()
+        public void InputDisplayPort2()
 		{
             AppendChecksumAndSend(Dp2Cmd);
-		}
+            Poll();
+        }
 
-		public void InputDvi1()
+        public void InputDvi1()
 		{
             AppendChecksumAndSend(Dvi1Cmd);
-		}
+            Poll();
+        }
 
-		public void InputVideo1()
+        public void InputVideo1()
 		{
             AppendChecksumAndSend(Video1Cmd);
-		}
+            Poll();
+        }
 
-		public void InputVga()
+        public void InputVga()
 		{
             AppendChecksumAndSend(VgaCmd);
-		}
+            Poll();
+        }
 
-		public void InputRgb()
+        public void InputRgb()
 		{
             AppendChecksumAndSend(RgbCmd);
-		}
+            Poll();
+        }
 
-		public override void ExecuteSwitch(object selector)
+        public override void ExecuteSwitch(object selector)
 		{
 			if (selector is Action)
 				(selector as Action).Invoke();
@@ -531,17 +557,18 @@ namespace PDT.NecDisplay.EPI
 				Items = new Dictionary<string, ISelectableItem>
 				{
 					{
-						Hdmi1Cmd, new NecInput("HDMI1", "HDMI 1", this, Hdmi1Cmd)
+						"\x30\x30\x30\x30\x38\x38\x30\x30\x31\x31", new NecInput("HDMI1", "HDMI 1", this, Hdmi1Cmd)
 					},
 					{
-						Hdmi2Cmd, new NecInput("HDMI2", "HDMI 2", this, Hdmi2Cmd)
+                        "\x30\x30\x30\x30\x38\x38\x30\x30\x31\x32", new NecInput("HDMI2", "HDMI 2", this, Hdmi2Cmd)
 					},
 					{
-						Dp1Cmd, new NecInput("DP1", "Display Port 1", this, Dp1Cmd)
+                        "\x30\x30\x30\x30\x38\x38\x30\x30\x30\x46", new NecInput("DP1", "Display Port 1", this, Dp1Cmd)
 					},
-					{
-						Dp2Cmd, new NecInput("DP2", "Display Port 2", this, Dp2Cmd)
-					}
+					// Need to determine DisplayPort 2 FB string
+					//{ 
+					//	Dp2Cmd, new NecInput("DP2", "Display Port 2", this, Dp2Cmd)
+					//}
 				}
 			};
 
