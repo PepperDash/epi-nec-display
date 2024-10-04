@@ -8,7 +8,13 @@ namespace PDT.NecDisplay.EPI
 		/// ID of the display control.  Expressed as a byte escaped in a string
 		/// </summary>
 		/// <example>"\x2A"</example>
-		[JsonProperty("id")]
-		public string ID { get; set; }
-	}
+		[JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
+		public string Id { get; set; }
+
+        [JsonProperty("warmupTime", NullValueHandling = NullValueHandling.Ignore)]
+        public uint? WarmupTime { get; set; }
+
+        [JsonProperty("cooldownTime", NullValueHandling = NullValueHandling.Ignore)]
+        public uint? CooldownTime { get; set; }
+    }
 }

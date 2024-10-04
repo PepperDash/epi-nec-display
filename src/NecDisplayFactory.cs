@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+﻿using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Config;
 using System.Collections.Generic;
@@ -10,25 +9,21 @@ namespace PDT.NecDisplay.EPI
     {
         public NecDisplayFactory()
         {
-            TypeNames = new List<string> { "necDisplay" };
+            TypeNames = new List<string> { "necDisplay", "necmpsx" };
         }
 
         public override EssentialsDevice BuildDevice(DeviceConfig dc)
         {
             var config = dc.Properties.ToObject<NecDisplayConfigObject>();
             var comm = CommFactory.CreateCommForDevice(dc);
-            try
+
+            if(comm == null)
             {
-                // if there is no id in the config file an exception is thrown
-                var newMe = new PdtNecDisplay(dc.Key, dc.Name, comm, dc.Properties["id"].Value<string>());
-                return newMe;
+                Debug.LogMessage(Serilog.Events.LogEventLevel.Error, "Unable to create comm device");
+                return null;
             }
-            catch
-            {
-                // if there is no id in the config file an exception is thrown.  id will default to (0x2a) the all displays command
-                var newMe = new PdtNecDisplay(dc.Key, dc.Name, comm);
-                return newMe;
-            }
+            
+            return new PdtNecDisplay(dc.Key, dc.Name, comm, config);            
         }
     }   
 }

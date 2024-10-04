@@ -11,6 +11,7 @@ using PepperDash.Essentials.Core.DeviceTypeInterfaces;
 using PepperDash.Essentials.Core.Queues;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Linq;
 using System.Text;
 using Feedback = PepperDash.Essentials.Core.Feedback;
@@ -29,6 +30,7 @@ namespace PDT.NecDisplay.EPI
 		public CommunicationGather PortGather { get; private set; }
 		public StatusMonitorBase CommunicationMonitor { get; private set; }
 		private int PollState = 0;
+        
 		#region Command constants
 
 		private GenericQueue _transmitQueue;
@@ -114,7 +116,18 @@ namespace PDT.NecDisplay.EPI
            }
        }
 
-		protected override Func<bool> PowerIsOnFeedbackFunc { get { return () => _PowerIsOn; } }
+		protected override Func<bool> PowerIsOnFeedbackFunc
+        {
+            get
+            {
+                return () =>
+                {
+                    Debug.LogMessage(Serilog.Events.LogEventLevel.Debug, "Power State: {power}", this, _PowerIsOn);
+                    return _PowerIsOn;
+                };
+            }
+        }
+
 		protected override Func<bool> IsCoolingDownFeedbackFunc { get { return () => _IsCoolingDown; } }
 		protected override Func<bool> IsWarmingUpFeedbackFunc { get { return () => _IsWarmingUp; } }
 
@@ -125,58 +138,15 @@ namespace PDT.NecDisplay.EPI
 
         public PdtNecDisplay(string key, string name, IBasicCommunication comm, NecDisplayConfigObject props)
     : base(key, name)
-        {
-			var id = props.ID;
-            _ID = id == null ? (byte)0x2A : Convert.ToByte(id);
+        {			
+            _ID = string.IsNullOrEmpty(props.Id) ? (byte)0x2A : Convert.ToByte(props.Id);
             Communication = comm;
+
+            CooldownTime = props.CooldownTime ?? 5000;
+            WarmupTime = props.WarmupTime ?? 5000;
+
             Init();
         }
-
-
-
-        /// <summary>
-        /// Constructor for IBasicCommunication with id passed from the device properties in the config file
-        /// </summary>
-        public PdtNecDisplay(string key, string name, IBasicCommunication comm, string id)
-			: base(key, name)
-		{
-           _ID = id == null ? (byte)0x2A : Convert.ToByte(id); 
-           Communication = comm;
-			Init();
-		}
-
-        /// <summary>
-        /// Constructor for IBasicCommunication when no id is in the properties of the config file
-        /// </summary>
-        public PdtNecDisplay(string key, string name, IBasicCommunication comm)
-            : base(key, name)
-        {
-            _ID = (byte)0x2A; 
-            Communication = comm;
-            Init();
-        }
-
-		/// <summary>
-		/// Constructor for TCP
-		/// </summary>
-        public PdtNecDisplay(string key, string name, string hostname, int port, string id)
-			: base(key, name)
-		{
-            _ID = id == null ? (byte)0x2A : Convert.ToByte(id);
-			Communication = new GenericTcpIpClient(key + "-tcp", hostname, port, 5000);
-			Init();
-		}
-
-		/// <summary>
-		/// Constructor for COM
-		/// </summary>
-        public PdtNecDisplay(string key, string name, ComPort port, ComPort.ComPortSpec spec, string id)
-			: base(key, name)
-		{
-            _ID = id == null ? (byte)0x2A : Convert.ToByte(id); // If id is null, set default value of 0x2A (all displays command in NEC), otherwise assign value passed in constructor
-			Communication = new ComPortController(key + "-com", port, spec);
-			Init();
-		}
 
 		void Init()
 		{
@@ -223,13 +193,11 @@ namespace PDT.NecDisplay.EPI
 			PortGather = null;
 		}
 
-		public override bool CustomActivate()
-		{
-			Communication.Connect();
-			CommunicationMonitor.StatusChange += (o, a) => { Debug.Console(2, this, "Communication monitor state: {0}", CommunicationMonitor.Status); };
-			CommunicationMonitor.Start();
-			return true;
-		}
+        public override void Initialize()
+        {
+            Communication.Connect();            
+            CommunicationMonitor.Start();
+        }        
 
 		public void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
 		{
@@ -281,13 +249,19 @@ namespace PDT.NecDisplay.EPI
 
 					switch (bytes[23])
 					{
-						//case 0x31:
-						//	{
-						//		Debug.Console(0, this, "Device is On");
-						//		_PowerIsOn = true;
-						//		PowerIsOnFeedback.FireUpdate();
-						//		break;
-						//	}
+                        //case 0x31:
+                        //	{
+                        //		Debug.Console(0, this, "Device is On");
+                        //		_PowerIsOn = true;
+                        //		PowerIsOnFeedback.FireUpdate();
+                        //		break;
+                        //	}
+                        case 0x31:
+                            {
+                                _PowerIsOn = true;
+                                PowerIsOnFeedback.FireUpdate();
+                                break;
+                            }
 						case 0x32:
 							{
 								//Debug.Console(2, this, "Device is in Standby");
@@ -387,36 +361,64 @@ namespace PDT.NecDisplay.EPI
 
 		public override void PowerOn()
 		{
+            if (_PowerIsOn)
+            {
+                Debug.LogMessage(Serilog.Events.LogEventLevel.Debug, "Display is on");
+                return;
+            }
+
+            if(_IsCoolingDown || _IsWarmingUp)
+            {
+                Debug.LogMessage(Serilog.Events.LogEventLevel.Debug, "State is changing");
+                return;
+            }
+
             AppendChecksumAndSend(PowerOnCmd);
 			Poll();
-			if (!PowerIsOnFeedback.BoolValue && !_IsWarmingUp && !_IsCoolingDown)
+			
+			
+			_IsWarmingUp = true;
+			IsWarmingUpFeedback.FireUpdate();
+			// Fake power-up cycle
+			WarmupTimer = new CTimer(o =>
 			{
-				_IsWarmingUp = true;
+                Debug.LogMessage(Serilog.Events.LogEventLevel.Information, "Warmup complete");
+				_IsWarmingUp = false;
 				IsWarmingUpFeedback.FireUpdate();
-				// Fake power-up cycle
-				WarmupTimer = new CTimer(o =>
-				{
-					_IsWarmingUp = false;
-					IsWarmingUpFeedback.FireUpdate();
-				}, WarmupTime);
-			}
+			}, WarmupTime);
+			
 		}
 
 		public override void PowerOff()
 		{
-			// If a display has unreliable-power off feedback, just override this and
+            if(!_PowerIsOn)
+            {
+                Debug.LogMessage(Serilog.Events.LogEventLevel.Debug, "Display is off");
+                return;
+            }
+
+            if(_IsWarmingUp || _IsCoolingDown)
+            {
+                Debug.LogMessage(Serilog.Events.LogEventLevel.Debug, "State is changing");
+                return;
+            }
+			// If a display has unreliable-po
+            //
+            // appdebug 1
+            // er off feedback, just override this and
 			// remove this check.
-                AppendChecksumAndSend(PowerOffCmd);
-				Poll();
-				_IsCoolingDown = true;
+            AppendChecksumAndSend(PowerOffCmd);
+			Poll();
+
+			_IsCoolingDown = true;
+			IsCoolingDownFeedback.FireUpdate();
+			// Fake cool-down cycle
+			CooldownTimer = new CTimer(o =>
+			{
+                Debug.LogMessage(Serilog.Events.LogEventLevel.Information, "Cooldown complete");
+				_IsCoolingDown = false;
 				IsCoolingDownFeedback.FireUpdate();
-				// Fake cool-down cycle
-				CooldownTimer = new CTimer(o =>
-				{
-					Debug.Console(2, this, "Cooldown timer ending");
-					_IsCoolingDown = false;
-					IsCoolingDownFeedback.FireUpdate();
-				}, CooldownTime);
+			}, CooldownTime);
 		}
 
 		public override void PowerToggle()
@@ -525,11 +527,33 @@ namespace PDT.NecDisplay.EPI
 
         public override void ExecuteSwitch(object selector)
 		{
-			if (selector is Action)
-				(selector as Action).Invoke();
-			else
-				Debug.Console(1, this, "WARNING: ExecuteSwitch cannot handle type {0}", selector.GetType());
-			//Send((string)selector);
+            if (_PowerIsOn)
+            {
+                if (!(selector is Action switchInput)) return;
+
+                switchInput();
+
+                return;
+            }
+			
+            void handler(object sender, FeedbackEventArgs args)
+            {
+                if (_IsWarmingUp)
+                    return;
+
+                IsWarmingUpFeedback.OutputChange -= handler;
+
+                if(!(selector is Action switchInput))
+                {
+                    return;
+                }
+
+                switchInput();
+            }
+
+            IsWarmingUpFeedback.OutputChange += handler;
+
+            PowerOn();
 		}
 
 		void SetVolume(ushort level)
@@ -615,32 +639,29 @@ namespace PDT.NecDisplay.EPI
 		#endregion
 	}
 
-	public class NecPSXMDisplayFactory : EssentialsDeviceFactory<PdtNecDisplay>
-	{
-		public NecPSXMDisplayFactory()
-		{
-			TypeNames = new List<string>() { "necmpsx", "necdisplay" };
-		}
+	//public class NecPSXMDisplayFactory : EssentialsPluginDeviceFactory<PdtNecDisplay>
+	//{
+	//	public NecPSXMDisplayFactory()
+	//	{
+	//		TypeNames = new List<string>() { "necmpsx", "necdisplay" };
+	//	}
 
-		public override EssentialsDevice BuildDevice(DeviceConfig dc)
-		{
-			Debug.Console(1, "Factory Attempting to create new Generic Comm Device");
-			var comm = CommFactory.CreateCommForDevice(dc);
-			if (comm != null)
-                try
-                {
-                    var props = JsonConvert.DeserializeObject<NecDisplayConfigObject>(dc.Properties.ToString());
+	//	public override EssentialsDevice BuildDevice(DeviceConfig dc)
+	//	{
+	//		Debug.Console(1, "Factory Attempting to create new Generic Comm Device");
+	//		var comm = CommFactory.CreateCommForDevice(dc);
+ //           if (comm != null)
+ //           {
 
-                    return new PdtNecDisplay(dc.Key, dc.Name, comm, props);
-                }
-                catch
-                {
-                    
-                    return new PdtNecDisplay(dc.Key, dc.Name, comm);
-                }
-			else
-				return null;
-		}
-	}
+ //               var props = JsonConvert.DeserializeObject<NecDisplayConfigObject>(dc.Properties.ToString());
+
+ //               return new PdtNecDisplay(dc.Key, dc.Name, comm, props);
+ //           }
+
+
+ //           else
+ //               return null;
+	//	}
+	//}
 
 }
