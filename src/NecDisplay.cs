@@ -563,12 +563,7 @@ namespace PDT.NecDisplay.EPI
 
 
                 if (!(selector is Action switchInput)) return;
-                var switchInput = selector as Action;
-
-                if(switchInput == null)
-                {
-                    return;
-                }
+                switchInput = selector as Action;                
 
                 switchInput();
             }
