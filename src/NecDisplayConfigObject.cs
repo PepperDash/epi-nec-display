@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace PDT.NecDisplay.EPI
 {
@@ -16,5 +17,26 @@ namespace PDT.NecDisplay.EPI
 
         [JsonProperty("cooldownTime", NullValueHandling = NullValueHandling.Ignore)]
         public uint? CooldownTime { get; set; }
-    }
+
+        [JsonProperty("friendlyNames")]
+        public List<FriendlyName> FriendlyNames { get; set; }
+
+        public NecDisplayConfigObject()
+            {
+            FriendlyNames = new List<FriendlyName>();
+            }
+        }
+    public class FriendlyName
+        {
+        [JsonProperty("inputKey")]
+        public string InputKey { get; set; }
+
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("hideInput")]
+        public bool HideInput { get; set; }
+        }
+
 }
+

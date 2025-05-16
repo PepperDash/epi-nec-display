@@ -3,6 +3,7 @@ using Crestron.SimplSharpPro;
 using Crestron.SimplSharpPro.DeviceSupport;
 using Crestron.SimplSharpPro.GeneralIO;
 using Newtonsoft.Json;
+using PDT.NecDisplay.EPI;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
@@ -16,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using static Org.BouncyCastle.Math.EC.ECCurve;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 #if SERIES4
 using TwoWayDisplayBase = PepperDash.Essentials.Devices.Common.Displays.TwoWayDisplayBase;
@@ -23,11 +25,15 @@ using TwoWayDisplayBase = PepperDash.Essentials.Devices.Common.Displays.TwoWayDi
 using TwoWayDisplayBase = PepperDash.Essentials.Core.TwoWayDisplayBase;
 #endif
 
+
 namespace PDT.NecDisplay.EPI
 {
     /// <summary>
     /// 
     /// </summary>
+	/// 
+
+
     public class PdtNecDisplay : TwoWayDisplayBase, IBasicVolumeWithFeedback, ICommunicationMonitor, IBridgeAdvanced
 #if SERIES4
 		, IHasInputs<string>
@@ -37,10 +43,12 @@ namespace PDT.NecDisplay.EPI
 		public CommunicationGather PortGather { get; private set; }
 		public StatusMonitorBase CommunicationMonitor { get; private set; }
 		private int PollState = 0;
-        
-		#region Command constants
+        private NecDisplayConfigObject _config;
 
-		private GenericQueue _transmitQueue;
+
+        #region Command constants
+
+        private GenericQueue _transmitQueue;
 
         public const string HeaderCmd = "\x01\x30";
         public const string InputGetCmd = "\x30\x43\x30\x36\x02\x30\x30\x36\x30\x03";
@@ -148,6 +156,9 @@ namespace PDT.NecDisplay.EPI
             _ID = string.IsNullOrEmpty(props.Id) ? (byte)0x2A : Convert.ToByte(props.Id);
             Communication = comm;
 
+            _config = props;
+
+
             CooldownTime = props.CooldownTime ?? 5000;
             WarmupTime = props.WarmupTime ?? 5000;
 
@@ -161,12 +172,29 @@ namespace PDT.NecDisplay.EPI
 
             PortGather = new CommunicationGather(Communication, '\x0D');
 			PortGather.LineReceived += this.Port_LineReceived;
-
             CommunicationMonitor = new GenericCommunicationMonitor(this, Communication, 15000, 120000, 300000, Poll);
+
+
+
 
 			InputPorts.Add(new RoutingInputPort(RoutingPortNames.HdmiIn1, eRoutingSignalType.Audio | eRoutingSignalType.Video,
 				eRoutingPortConnectionType.Hdmi, new Action(InputHdmi1), this));
-			InputPorts.Add(new RoutingInputPort(RoutingPortNames.HdmiIn2, eRoutingSignalType.Audio | eRoutingSignalType.Video,
+
+
+            var (hdmi1Name, hdmi1Hide) = GetFriendlyName(RoutingPortNames.HdmiIn1, "HDMI 1");
+            if (!hdmi1Hide)
+                {
+                InputPorts.Add(new RoutingInputPort(
+                    RoutingPortNames.HdmiIn1,
+                    eRoutingSignalType.Audio | eRoutingSignalType.Video,
+                    eRoutingPortConnectionType.Hdmi,
+                    new Action(InputHdmi1),
+                   // hdmi1Name,
+                    this));
+                }
+
+
+            InputPorts.Add(new RoutingInputPort(RoutingPortNames.HdmiIn2, eRoutingSignalType.Audio | eRoutingSignalType.Video,
 				eRoutingPortConnectionType.Hdmi, new Action(InputHdmi2), this));
 			InputPorts.Add(new RoutingInputPort(RoutingPortNames.HdmiIn3, eRoutingSignalType.Audio | eRoutingSignalType.Video,
 				eRoutingPortConnectionType.Hdmi, new Action(InputHdmi3), this));
@@ -610,32 +638,30 @@ namespace PDT.NecDisplay.EPI
 #if SERIES4
         public ISelectableItems<string> Inputs{ get; private set; }
 
-		private void SetupInputs()
-		{
-			Inputs = new NecInputs
-			{
-				Items = new Dictionary<string, ISelectableItem>
-				{
-					{
-						"\x30\x30\x30\x30\x38\x38\x30\x30\x31\x31", new NecInput("HDMI1", "HDMI 1", this, Hdmi1Cmd)
-					},
-					{
-                        "\x30\x30\x30\x30\x38\x38\x30\x30\x31\x32", new NecInput("HDMI2", "HDMI 2", this, Hdmi2Cmd)
-					},
-					{
-                        "\x30\x30\x30\x30\x38\x38\x30\x30\x30\x46", new NecInput("DP1", "Display Port 1", this, Dp1Cmd)
-					},
-					// Need to determine DisplayPort 2 FB string
-					//{ 
-					//	Dp2Cmd, new NecInput("DP2", "Display Port 2", this, Dp2Cmd)
-					//}
-				}
-			};
+        private void SetupInputs()
+            {
+            Inputs = new NecInputs
+                {
+                Items = new Dictionary<string, ISelectableItem>()
+                };
 
-		}
+            void AddInput(string inputKey, string defaultName, string protocolKey, string command)
+                {
+                var (friendlyName, hide) = GetFriendlyName(inputKey, defaultName);
+                if (!hide)
+                    {
+                    Inputs.Items.Add(protocolKey, new NecInput(inputKey, friendlyName, this, command));
+                    }
+                }
+
+            AddInput("HDMI1", "HDMI 1", "\x30\x30\x30\x30\x38\x38\x30\x30\x31\x31", Hdmi1Cmd);
+            AddInput("HDMI2", "HDMI 2", "\x30\x30\x30\x30\x38\x38\x30\x30\x31\x32", Hdmi2Cmd);
+            AddInput("DP1", "Display Port 1", "\x30\x30\x30\x30\x38\x38\x30\x30\x30\x46", Dp1Cmd);
+            }
+
 #endif
 
-		public void MuteOff()
+        public void MuteOff()
 		{
             AppendChecksumAndSend(MuteOffCmd);
 		}
@@ -669,6 +695,16 @@ namespace PDT.NecDisplay.EPI
 		{			
 			SetVolume(_VolumeLevel--);
 		}
+        private (string name, bool hide) GetFriendlyName(string inputKey, string defaultName)
+            {
+            if (_config?.FriendlyNames != null)
+                {
+                var match = _config.FriendlyNames.FirstOrDefault(f => f.InputKey == inputKey);
+                if (match != null)
+                    return (match.Name ?? defaultName, match.HideInput);
+                }
+            return (defaultName, false);
+            }
 
 		#endregion
 	}
