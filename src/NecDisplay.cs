@@ -1,29 +1,17 @@
 ﻿using Crestron.SimplSharp;
-using Crestron.SimplSharpPro;
 using Crestron.SimplSharpPro.DeviceSupport;
-using Crestron.SimplSharpPro.GeneralIO;
-using Newtonsoft.Json;
-using PDT.NecDisplay.EPI;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
-using PepperDash.Essentials.Core.Config;
 using PepperDash.Essentials.Core.DeviceTypeInterfaces;
 using PepperDash.Essentials.Core.Queues;
-#if SERIES3
-using PepperDash.Essentials.Core.Routing;
-#endif
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using static Org.BouncyCastle.Math.EC.ECCurve;
 using Feedback = PepperDash.Essentials.Core.Feedback;
-#if SERIES4
 using TwoWayDisplayBase = PepperDash.Essentials.Devices.Common.Displays.TwoWayDisplayBase;
-#else
-using TwoWayDisplayBase = PepperDash.Essentials.Core.TwoWayDisplayBase;
-#endif
+
 
 
 namespace PDT.NecDisplay.EPI
@@ -34,10 +22,8 @@ namespace PDT.NecDisplay.EPI
 	/// 
 
 
-    public class PdtNecDisplay : TwoWayDisplayBase, IBasicVolumeWithFeedback, ICommunicationMonitor, IBridgeAdvanced
-#if SERIES4
-		, IHasInputs<string>
-#endif
+    public class PdtNecDisplay : TwoWayDisplayBase, IBasicVolumeWithFeedback, ICommunicationMonitor, IBridgeAdvanced, IHasInputs<string>
+
 	{
 		public IBasicCommunication Communication { get; private set; }
 		public CommunicationGather PortGather { get; private set; }
@@ -217,9 +203,7 @@ namespace PDT.NecDisplay.EPI
 			MuteFeedback = new BoolFeedback(() => _IsMuted);
 			VideoIsMutedFeedback = new BoolFeedback(() => VideoIsMuted);
 
-#if SERIES4
             SetupInputs();
-#endif
 		}
 
         ~PdtNecDisplay()
@@ -336,7 +320,7 @@ namespace PDT.NecDisplay.EPI
 					bytes[10] == 0x30 && bytes[11] == 0x30 && bytes[12] == 0x36 && bytes[13] == 0x30))
 				{
 					//Debug.Console(2, this, "Input State Response...");
-#if SERIES4
+
 					// Compare the relevant portion of the response to the key for each input to find a match
 					foreach (var input in Inputs.Items)
 					{
@@ -352,9 +336,7 @@ namespace PDT.NecDisplay.EPI
 							input.Value.IsSelected = false;
 						}
 					}
-#else
-#endif
-				}
+                }
 			}
 		}
 
@@ -566,22 +548,14 @@ namespace PDT.NecDisplay.EPI
 		{
             if (_PowerIsOn)
             {
-#if SERIES4
                 if (!(selector is Action switchInput)) return;
-#else
-                var switchInput = selector as Action;
 
-                if(switchInput == null)
-                {
-                    return;
-                }
-#endif
 
                 switchInput();
 
                 return;
             }
-#if SERIES4
+
             void handler(object sender, FeedbackEventArgs args)
             {
                 if (_IsWarmingUp)
@@ -595,25 +569,6 @@ namespace PDT.NecDisplay.EPI
 
                 switchInput();
             }
-#else
-            EventHandler<FeedbackEventArgs> handler = null;
-
-            handler = (o, a) => {
-                if(_IsWarmingUp)
-                    return;
-
-                IsWarmingUpFeedback.OutputChange -= handler;
-
-                var switchInput = selector as Action;
-
-                if(switchInput == null)
-                {
-                    return;
-                }
-
-                switchInput();
-            };
-#endif
 
             IsWarmingUpFeedback.OutputChange += handler;
 
@@ -635,7 +590,7 @@ namespace PDT.NecDisplay.EPI
 
 		public BoolFeedback MuteFeedback { get; private set; }
 
-#if SERIES4
+
         public ISelectableItems<string> Inputs{ get; private set; }
 
         private void SetupInputs()
@@ -658,8 +613,6 @@ namespace PDT.NecDisplay.EPI
             AddInput("HDMI2", "HDMI 2", "\x30\x30\x30\x30\x38\x38\x30\x30\x31\x32", Hdmi2Cmd);
             AddInput("DP1", "Display Port 1", "\x30\x30\x30\x30\x38\x38\x30\x30\x30\x46", Dp1Cmd);
             }
-
-#endif
 
         public void MuteOff()
 		{

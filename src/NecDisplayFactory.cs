@@ -20,11 +20,8 @@ namespace PDT.NecDisplay.EPI
 
             if(comm == null)
             {
-#if SERIES4
                 Debug.LogMessage(Serilog.Events.LogEventLevel.Error, "Unable to create comm device");
-#else
-                Debug.Console(0, "Unable to create comm device");
-#endif
+
                 return null;
             }
             
