@@ -175,12 +175,11 @@ namespace PDT.NecDisplay.EPI
 				eRoutingPortConnectionType.DisplayPort, new Action(InputDisplayPort2), this));
 			InputPorts.Add(new RoutingInputPort(RoutingPortNames.DviIn, eRoutingSignalType.Audio | eRoutingSignalType.Video,
 				eRoutingPortConnectionType.Dvi, new Action(InputDvi1), this));
-			InputPorts.Add(new RoutingInputPort(RoutingPortNames.CompositeIn, eRoutingSignalType.Audio | eRoutingSignalType.Video,
-				eRoutingPortConnectionType.Composite, new Action(InputVideo1), this));
-			InputPorts.Add(new RoutingInputPort(RoutingPortNames.VgaIn, eRoutingSignalType.Video,
-				eRoutingPortConnectionType.Vga, new Action(InputVga), this));
-			InputPorts.Add(new RoutingInputPort(RoutingPortNames.RgbIn, eRoutingSignalType.Video,
-				eRoutingPortConnectionType.Rgb, new Action(new Action(InputRgb)), this));
+            InputPorts.Add(new RoutingInputPort("analogTuner", eRoutingSignalType.Video,
+                eRoutingPortConnectionType.BackplaneOnly, new Action(InputTunerAnalog), this));
+            InputPorts.Add(new RoutingInputPort("digitalTuner", eRoutingSignalType.Video,
+                eRoutingPortConnectionType.BackplaneOnly, new Action(InputTunerDigital), this));
+
 
 			VolumeLevelFeedback = new IntFeedback(() => { return _VolumeLevel; });
 			MuteFeedback = new BoolFeedback(() => _IsMuted);
@@ -423,6 +422,30 @@ namespace PDT.NecDisplay.EPI
 		{
             AppendChecksumAndSend(RgbCmd);
 		}
+
+        public void InputTunerAnalog()
+        {
+            AppendChecksumAndSend(TunerAnalogCmd);
+            Poll();
+        }
+
+        public void InputTunerDigital()
+        {
+            AppendChecksumAndSend(TunerDigitalCmd);
+            Poll();
+        }
+
+        public void TunerChannelUp()
+        {
+            AppendChecksumAndSend(TunerChannelUpCmd);
+            Poll();
+        }
+
+        public void TunerChannelDown()
+        {
+            AppendChecksumAndSend(TunerChannelDownCmd);
+            Poll();
+        }
 
 		public override void ExecuteSwitch(object selector)
 		{

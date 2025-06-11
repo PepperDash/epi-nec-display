@@ -96,6 +96,9 @@ namespace PDT.NecDisplay.EPI
                     displayDevice.MatrixModeOff();
                 });
 
+                // Tuner Controls
+                trilist.SetSigTrueAction(joinMap.TunerChannelUp, () => TunerChannelUp());
+                trilist.SetSigTrueAction(joinMap.TunerChannelDown, () => TunerChannelDown()); 
 
 				
 				displayDevice.PowerIsOnFeedback.LinkInputSig(trilist.BooleanInput[joinMap.PowerOn]);
@@ -251,6 +254,8 @@ namespace PDT.NecDisplay.EPI
         public uint PictureMuteToggle { get; set; }
         public uint MatrixModeOff { get; set; }
         public uint MatrixModeOn { get; set; }
+        public uint TunerChannelUp {get; set; }
+        public uint TunerChannelDown { get; set; }
 
         // Analog
         public uint InputSelect { get; set; }
@@ -275,6 +280,9 @@ namespace PDT.NecDisplay.EPI
             PictureMuteOff = 21;
             PictureMuteOn = 22;
             PictureMuteToggle = 23;
+
+            TunerChannelUp = 31;
+            TunerChannelDown = 32;
 
             MatrixModeOff = 41;
             MatrixModeOn = 42;
@@ -308,6 +316,9 @@ namespace PDT.NecDisplay.EPI
 			InputSelectOffset = InputSelectOffset + joinOffset;
             MatrixModeOff = MatrixModeOff + joinOffset;
             MatrixModeOn = MatrixModeOn + joinOffset;
+
+            TunerChannelUp = TunerChannelUp + joinOffset;
+            TunerChannelDown = TunerChannelDown + joinOffset;
 
             InputSelect = InputSelect + joinOffset;
 
