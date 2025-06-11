@@ -97,8 +97,8 @@ namespace PDT.NecDisplay.EPI
                 });
 
                 // Tuner Controls
-                trilist.SetSigTrueAction(joinMap.TunerChannelUp, () => TunerChannelUp());
-                trilist.SetSigTrueAction(joinMap.TunerChannelDown, () => TunerChannelDown()); 
+                trilist.SetSigTrueAction(joinMap.TunerChannelUp, () => displayDevice.TunerChannelUp());
+                trilist.SetSigTrueAction(joinMap.TunerChannelDown, () => displayDevice.TunerChannelDown()); 
 
 				
 				displayDevice.PowerIsOnFeedback.LinkInputSig(trilist.BooleanInput[joinMap.PowerOn]);
@@ -124,7 +124,7 @@ namespace PDT.NecDisplay.EPI
 						{
 							displayDevice.PowerOff();
 						}
-						else if (a > 0 && a < displayDevice.InputPorts.Count )
+						else if (a > 0 && a <= displayDevice.InputPorts.Count )
 						{
 							displayDevice.ExecuteSwitch(displayDevice.InputPorts.ElementAt(a - 1).Selector);
 						}
