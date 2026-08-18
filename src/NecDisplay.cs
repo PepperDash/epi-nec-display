@@ -51,6 +51,8 @@ namespace PDT.NecDisplay.EPI
         public const string RgbCmd = "\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x32\x03"; 
         public const string TunerAnalogCmd = "\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x30\x39\x03";
         public const string TunerDigitalCmd = "\x30\x45\x30\x41\x02\x30\x30\x36\x30\x30\x30\x31\x30\x03";
+        public const string AnalogTunerInputKey = "analogTuner";
+        public const string DigitalTunerInputKey = "digitalTuner";
 
         public const string PowerOnCmd = "\x30\x41\x30\x43\x02\x43\x32\x30\x33\x44\x36\x30\x30\x30\x31\x03"; 
         public const string PowerOffCmd = "\x30\x41\x30\x43\x02\x43\x32\x30\x33\x44\x36\x30\x30\x30\x34\x03"; 
@@ -202,9 +204,9 @@ namespace PDT.NecDisplay.EPI
 				eRoutingPortConnectionType.Vga, new Action(InputVga), this));
 			InputPorts.Add(new RoutingInputPort(RoutingPortNames.RgbIn, eRoutingSignalType.Video,
 				eRoutingPortConnectionType.Rgb, new Action(new Action(InputRgb)), this));
-            InputPorts.Add(new RoutingInputPort("analogTuner", eRoutingSignalType.Video,
+            InputPorts.Add(new RoutingInputPort(AnalogTunerInputKey, eRoutingSignalType.Video,
                 eRoutingPortConnectionType.BackplaneOnly, new Action(InputTunerAnalog), this));
-            InputPorts.Add(new RoutingInputPort("digitalTuner", eRoutingSignalType.Video,
+            InputPorts.Add(new RoutingInputPort(DigitalTunerInputKey, eRoutingSignalType.Video,
                 eRoutingPortConnectionType.BackplaneOnly, new Action(InputTunerDigital), this));
 
 			VolumeLevelFeedback = new IntFeedback(() => { return _VolumeLevel; });
@@ -646,8 +648,8 @@ namespace PDT.NecDisplay.EPI
             AddInput("HDMI1", "HDMI 1", "\x30\x30\x30\x30\x38\x38\x30\x30\x31\x31", Hdmi1Cmd);
             AddInput("HDMI2", "HDMI 2", "\x30\x30\x30\x30\x38\x38\x30\x30\x31\x32", Hdmi2Cmd);
             AddInput("DP1", "Display Port 1", "\x30\x30\x30\x30\x38\x38\x30\x30\x30\x46", Dp1Cmd);
-            AddInput("analogTuner", "Analog Tuner", "\x30\x30\x30\x30\x38\x38\x30\x30\x30\x39", TunerAnalogCmd);
-            AddInput("digitalTuner", "Digital Tuner", "\x30\x30\x30\x30\x38\x38\x30\x30\x31\x30", TunerDigitalCmd);
+            AddInput(AnalogTunerInputKey, "Analog Tuner", "\x30\x30\x30\x30\x38\x38\x30\x30\x30\x39", TunerAnalogCmd);
+            AddInput(DigitalTunerInputKey, "Digital Tuner", "\x30\x30\x30\x30\x38\x38\x30\x30\x31\x30", TunerDigitalCmd);
             }
 
         public void MuteOff()
