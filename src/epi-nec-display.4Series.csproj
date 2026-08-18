@@ -5,7 +5,7 @@
   </PropertyGroup>
   
   <PropertyGroup>
-    <TargetFramework>net472</TargetFramework>
+    <TargetFramework>net8</TargetFramework>
     <RootNamespace>Pepperdash.Essentials.Plugins.Display.NEC</RootNamespace>
     <Deterministic>false</Deterministic>
     <AssemblyTitle>EPI.NEC.Display</AssemblyTitle>
@@ -22,10 +22,6 @@
     <PackageTags>crestron 4series nec display</PackageTags>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DefineConstants>$(DefineConstants);SERIES4</DefineConstants>
-  </PropertyGroup>
-
   <ItemGroup>
     <Compile Remove="Properties\**" />
     <EmbeddedResource Remove="Properties\**" />
@@ -40,7 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="PepperDashEssentials" Version="2.5.1">
+    <PackageReference Include="PepperDashEssentials" Version="3.0.0-rc.1">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
   </ItemGroup>
