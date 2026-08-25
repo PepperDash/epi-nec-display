@@ -9,7 +9,7 @@ namespace PDT.NecDisplay.EPI
     {
         public NecDisplayFactory()
         {
-            MinimumEssentialsFrameworkVersion = "3.0.0-rc.1";
+            MinimumEssentialsFrameworkVersion = "3.0.0";
             TypeNames = new List<string> { "necDisplay", "necmpsx" };
         }
 
