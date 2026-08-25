@@ -1,6 +1,7 @@
 ﻿using Crestron.SimplSharp;
 using Crestron.SimplSharpPro.DeviceSupport;
 using PepperDash.Core;
+using PepperDash.Core.Logging;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
 using PepperDash.Essentials.Core.DeviceTypeInterfaces;
@@ -9,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Timers;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 using TwoWayDisplayBase = PepperDash.Essentials.Devices.Common.Displays.TwoWayDisplayBase;
 
@@ -222,7 +224,7 @@ namespace PDT.NecDisplay.EPI
 		}
 
 
-        public override void Initialize()
+        protected override void Initialize()
         {
             Communication.Connect();            
             CommunicationMonitor.Start();
@@ -264,27 +266,14 @@ namespace PDT.NecDisplay.EPI
 
 		void Port_LineReceived(object dev, GenericCommMethodReceiveTextArgs args)
 		{
-			//Debug.Console(2, this, "Gathered: '{0}'", ComTextHelper.GetEscapedText(args.Text));
-
 			var bytes = Encoding.GetEncoding(28591).GetBytes(args.Text);
 
 			if (bytes[3] == _ID + 0x40)
 			{
-				//Debug.Console(2, this, "ID Match!");
-
 				if (bytes.Length > 20 && (bytes[9] == 0x32 && bytes[10] == 0x30 && bytes[11] == 0x30 && bytes[12] == 0x44 && bytes[13] == 0x36))
 				{
-					//Debug.Console(2, this, "Power State Response...");
-
 					switch (bytes[23])
 					{
-                        //case 0x31:
-                        //	{
-                        //		Debug.Console(0, this, "Device is On");
-                        //		_PowerIsOn = true;
-                        //		PowerIsOnFeedback.FireUpdate();
-                        //		break;
-                        //	}
                         case 0x31:
                             {
                                 _PowerIsOn = true;
@@ -293,14 +282,12 @@ namespace PDT.NecDisplay.EPI
                             }
 						case 0x32:
 							{
-								//Debug.Console(2, this, "Device is in Standby");
 								_PowerIsOn = false;
 								PowerIsOnFeedback.FireUpdate();
 								break;
 							}
 						case 0x34:
 							{
-								//Debug.Console(2, this, "Device is Off");
 								_PowerIsOn = false;
 								PowerIsOnFeedback.FireUpdate();
 								break;
@@ -311,13 +298,10 @@ namespace PDT.NecDisplay.EPI
 				}
 				else if (bytes.Length > 20 && (bytes[9] == 0x30 && bytes[10] == 0x43 && bytes[11] == 0x32 && bytes[12] == 0x30 && bytes[13] == 0x33))
 				{
-					//Debug.Console(2, this, "Power State Response...");
-
 					switch (bytes[19])
 					{
 						case 0x31:
 							{
-								//Debug.Console(2, this, "Device is On");
 								_PowerIsOn = true;
 								PowerIsOnFeedback.FireUpdate();
 								break;
@@ -329,14 +313,11 @@ namespace PDT.NecDisplay.EPI
 				else if (bytes.Length > 20 && (bytes[10] == 0x31 && bytes[11] == 0x31 && bytes[12] == 0x30 && bytes[13] == 0x36 ||
 					bytes[10] == 0x30 && bytes[11] == 0x30 && bytes[12] == 0x36 && bytes[13] == 0x30))
 				{
-					//Debug.Console(2, this, "Input State Response...");
-
 					// Compare the relevant portion of the response to the key for each input to find a match
 					foreach (var input in Inputs.Items)
 					{
 						if (input.Key.Equals(Encoding.GetEncoding(28591).GetString(bytes, 14, 10)))
 						{
-							//Debug.Console(2, this, "Input Match: {0}", input.Value.Name);
 							input.Value.IsSelected = true;
 							Inputs.CurrentItem = input.Value.Name;
 							CurrentInput = input.Value.Name;
@@ -380,8 +361,6 @@ namespace PDT.NecDisplay.EPI
 
 		void Send(string s)
 		{
-            // Temp debug
-            //Debug.Console(2, this, "Send: '{0}'", ComTextHelper.GetEscapedText(s));
 			var bytes = Encoding.GetEncoding(28591).GetBytes(s);
 			_transmitQueue.Enqueue(new ComsMessage(Communication, bytes));
 			//Communication.SendText(s);
@@ -392,13 +371,13 @@ namespace PDT.NecDisplay.EPI
 		{
             if (_PowerIsOn)
             {
-                Debug.Console(1, this, "Display is on");
+                this.LogInformation("Display is on");
                 return;
             }
 
             if(_IsCoolingDown || _IsWarmingUp)
             {
-                Debug.Console(1,this, "State is changing");
+                this.LogInformation("State is changing");
                 return;
             }
 
@@ -409,12 +388,14 @@ namespace PDT.NecDisplay.EPI
 			_IsWarmingUp = true;
 			IsWarmingUpFeedback.FireUpdate();
 			// Fake power-up cycle
-			WarmupTimer = new CTimer(o =>
+			WarmupTimer = new Timer(WarmupTime) { AutoReset = false };
+			WarmupTimer.Elapsed += (s, e) =>
 			{
-                Debug.Console(1, this, "Warmup complete");
+                this.LogInformation("Warmup complete");
 				_IsWarmingUp = false;
 				IsWarmingUpFeedback.FireUpdate();
-			}, WarmupTime);
+			};
+			WarmupTimer.Start();
 			
 		}
 
@@ -422,13 +403,13 @@ namespace PDT.NecDisplay.EPI
 		{
             if(!_PowerIsOn)
             {
-                Debug.Console(1,this, "Display is off");
+                this.LogInformation("Display is off");
                 return;
             }
 
             if(_IsWarmingUp || _IsCoolingDown)
             {
-                Debug.Console(1, this, "State is changing");
+                this.LogInformation("State is changing");
                 return;
             }
 			// If a display has unreliable-po
@@ -442,12 +423,14 @@ namespace PDT.NecDisplay.EPI
 			_IsCoolingDown = true;
 			IsCoolingDownFeedback.FireUpdate();
 			// Fake cool-down cycle
-			CooldownTimer = new CTimer(o =>
+			CooldownTimer = new Timer(CooldownTime) { AutoReset = false };
+			CooldownTimer.Elapsed += (s, e) =>
 			{
-                Debug.Console(1, this, "Cooldown complete");
+                this.LogInformation("Cooldown complete");
 				_IsCoolingDown = false;
 				IsCoolingDownFeedback.FireUpdate();
-			}, CooldownTime);
+			};
+			CooldownTimer.Start();
 		}
 
 		public override void PowerToggle()
@@ -472,7 +455,7 @@ namespace PDT.NecDisplay.EPI
 
         public void PictureMuteToggle()
         {
-			Debug.Console(2, this, "PictureMuteToggle: '{0}'", VideoIsMuted);
+			this.LogDebug("PictureMuteToggle: {VideoIsMuted}", VideoIsMuted);
 			if (!VideoIsMuted)
 			{
 				PictureMuteOn();
@@ -556,14 +539,14 @@ namespace PDT.NecDisplay.EPI
 
         public void InputTunerAnalog()
         {
-            Debug.Console(2, this, "Executing Tuner Analog");
+            this.LogDebug("Executing Tuner Analog");
             AppendChecksumAndSend(TunerAnalogCmd);
             Poll();
         }
 
         public void InputTunerDigital()
         {
-            Debug.Console(2, this, "Executing Tuner Digital");
+            this.LogDebug("Executing Tuner Digital");
             AppendChecksumAndSend(TunerDigitalCmd);
             Poll();
         }
@@ -615,7 +598,6 @@ namespace PDT.NecDisplay.EPI
 		{
 			var levelString = string.Format("{0}{1:X4}\x03", VolumeLevelPartialCmd, level);
 			AppendChecksumAndSend(levelString);
-			//Debug.Console(2, this, "Volume:{0}", ComTextHelper.GetEscapedText(levelString));
 			_VolumeLevel = level;
 			VolumeLevelFeedback.FireUpdate();
 		}
