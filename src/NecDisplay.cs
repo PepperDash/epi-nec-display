@@ -173,21 +173,6 @@ namespace PDT.NecDisplay.EPI
 
 			InputPorts.Add(new RoutingInputPort(RoutingPortNames.HdmiIn1, eRoutingSignalType.Audio | eRoutingSignalType.Video,
 				eRoutingPortConnectionType.Hdmi, new Action(InputHdmi1), this));
-
-
-            var (hdmi1Name, hdmi1Hide) = GetFriendlyName(RoutingPortNames.HdmiIn1, "HDMI 1");
-            if (!hdmi1Hide)
-                {
-                InputPorts.Add(new RoutingInputPort(
-                    RoutingPortNames.HdmiIn1,
-                    eRoutingSignalType.Audio | eRoutingSignalType.Video,
-                    eRoutingPortConnectionType.Hdmi,
-                    new Action(InputHdmi1),
-                   // hdmi1Name,
-                    this));
-                }
-
-
             InputPorts.Add(new RoutingInputPort(RoutingPortNames.HdmiIn2, eRoutingSignalType.Audio | eRoutingSignalType.Video,
 				eRoutingPortConnectionType.Hdmi, new Action(InputHdmi2), this));
 			InputPorts.Add(new RoutingInputPort(RoutingPortNames.HdmiIn3, eRoutingSignalType.Audio | eRoutingSignalType.Video,
